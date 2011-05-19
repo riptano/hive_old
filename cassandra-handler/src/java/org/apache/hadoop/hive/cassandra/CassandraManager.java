@@ -6,12 +6,12 @@ import org.apache.cassandra.thrift.CfDef;
 import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.KsDef;
 import org.apache.cassandra.thrift.NotFoundException;
-import org.apache.cassandra.thrift.SchemaDisagreementException;
 import org.apache.hadoop.hive.cassandra.serde.StandardColumnSerDe;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.thrift.TException;
 import org.apache.thrift.transport.TTransport;
+import org.mortbay.log.Log;
 
 /**
  * A class to handle the transaction to cassandra backend database.
@@ -91,6 +91,7 @@ public class CassandraManager {
    */
   public void openConnection() throws MetaException {
     try {
+      Log.debug("open connection to host:port", host, port);
       clientHolder =  new CassandraProxyClient(host, port, framedConnection, true);
     } catch (CassandraException e) {
       throw new MetaException("Unable to connect to the server " + e.getMessage());
@@ -163,11 +164,7 @@ public class CassandraManager {
     } catch (InvalidRequestException e) {
       throw new MetaException("Unable to create key space '" + keyspace + "'. Error:"
           + e.getMessage());
-    } catch (SchemaDisagreementException e) {
-      throw new MetaException("Unable to create key space '" + keyspace + "'. Error:"
-          + e.getMessage());
     }
-
   }
 
   /**
@@ -200,9 +197,6 @@ public class CassandraManager {
       throw new MetaException("Unable to create column family '" + columnFamilyName + "'. Error:"
           + e.getMessage());
     } catch (InvalidRequestException e) {
-      throw new MetaException("Unable to create column family '" + columnFamilyName + "'. Error:"
-          + e.getMessage());
-    } catch (SchemaDisagreementException e) {
       throw new MetaException("Unable to create column family '" + columnFamilyName + "'. Error:"
           + e.getMessage());
     }
@@ -306,9 +300,6 @@ public class CassandraManager {
       throw new MetaException("Unable to drop column family '" + columnFamilyName + "'. Error:"
           + e.getMessage());
     } catch (InvalidRequestException e) {
-      throw new MetaException("Unable to drop column family '" + columnFamilyName + "'. Error:"
-          + e.getMessage());
-    } catch (SchemaDisagreementException e) {
       throw new MetaException("Unable to drop column family '" + columnFamilyName + "'. Error:"
           + e.getMessage());
     }

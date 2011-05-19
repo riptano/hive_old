@@ -129,6 +129,10 @@ public class HiveIColumn implements IColumn, Writable {
     throw new UnsupportedOperationException();
   }
 
+  @Override
+  public IColumn deepCopy() {
+    throw new UnsupportedOperationException();
+  }
 
   @Override
   public Collection<IColumn> getSubColumns() {

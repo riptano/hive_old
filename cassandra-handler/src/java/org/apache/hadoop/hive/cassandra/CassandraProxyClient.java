@@ -14,7 +14,6 @@ import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.CfDef;
 import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.KsDef;
-import org.apache.cassandra.thrift.SchemaDisagreementException;
 import org.apache.cassandra.thrift.TimedOutException;
 import org.apache.cassandra.thrift.TokenRange;
 import org.apache.cassandra.thrift.UnavailableException;
@@ -182,8 +181,6 @@ public class CassandraProxyClient implements java.lang.reflect.InvocationHandler
       throw new CassandraException(e);
     } catch (TException e) {
       throw new CassandraException(e);
-    } catch (SchemaDisagreementException e){
-      throw new CassandraException(e);
     }
 
     checkRing();
@@ -203,13 +200,13 @@ public class CassandraProxyClient implements java.lang.reflect.InvocationHandler
    * @throws InterruptedException
    *           error
    */
-  private KsDef createTmpKs() throws InvalidRequestException, TException, SchemaDisagreementException {
+  private KsDef createTmpKs() throws InvalidRequestException, TException {
 
     Map<String, String> stratOpts = new HashMap<String, String>();
     stratOpts.put("replication_factor", "1");
 
     KsDef tmpKs = new KsDef("proxy_client_ks", "org.apache.cassandra.locator.SimpleStrategy",
-        Arrays.asList(new CfDef[] {})).setStrategy_options(stratOpts);
+        1, Arrays.asList(new CfDef[] {})).setStrategy_options(stratOpts);
 
     clientHolder.getClient().system_add_keyspace(tmpKs);
 
