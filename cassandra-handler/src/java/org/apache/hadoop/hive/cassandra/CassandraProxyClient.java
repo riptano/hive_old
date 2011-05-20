@@ -94,8 +94,10 @@ public class CassandraProxyClient implements java.lang.reflect.InvocationHandler
 
     // If randomized to choose a connection, initialize the random generator.
     if (randomizeConnections) {
+      logger.debug("Use randomized connection for " + host + ":" + port);
       nextServerGen = new RandomizerOption();
     } else {
+      logger.debug("Use round robin connection for " + host + ":" + port);
       nextServerGen = new RoundRobinOption();
     }
 
@@ -134,6 +136,8 @@ public class CassandraProxyClient implements java.lang.reflect.InvocationHandler
   private CassandraClientHolder createConnection(String host) throws CassandraException {
     TSocket socket = new TSocket(host, port);
     TTransport trans = framed ? new TFramedTransport(socket) : socket;
+
+    logger.debug("socke is opened: " + socket.isOpen() + " trans is opened: " + trans.isOpen());
 
     CassandraClientHolder ch = new CassandraClientHolder(trans);
 
@@ -209,6 +213,7 @@ public class CassandraProxyClient implements java.lang.reflect.InvocationHandler
         1, Arrays.asList(new CfDef[] {})).setStrategy_options(stratOpts);
 
     clientHolder.getClient().system_add_keyspace(tmpKs);
+    logger.debug("create temporary keyspace " + tmpKs);
 
     return tmpKs;
   }

@@ -46,6 +46,7 @@ public class CassandraClientHolder
         try
         {
             transport.open();
+            log.debug("Transport is open " + transport.isOpen());
         } catch (TTransportException e)
         {
             throw new CassandraException("unable to connect to server", e);
@@ -85,6 +86,8 @@ public class CassandraClientHolder
                 throw new CassandraException(e);
             }
         }
+
+        log.debug("set key space to : " + keyspace);
     }
 
     public Cassandra.Client getClient()

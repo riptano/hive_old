@@ -9,9 +9,10 @@ import org.apache.cassandra.thrift.NotFoundException;
 import org.apache.hadoop.hive.cassandra.serde.StandardColumnSerDe;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.Table;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.thrift.TException;
 import org.apache.thrift.transport.TTransport;
-import org.mortbay.log.Log;
 
 /**
  * A class to handle the transaction to cassandra backend database.
@@ -20,6 +21,8 @@ import org.mortbay.log.Log;
 public class CassandraManager {
   final static public int DEFAULT_REPLICATION_FACTOR = 1;
   final static public String DEFAULT_STRATEGY = "org.apache.cassandra.locator.SimpleStrategy";
+
+  private static final Logger logger = LoggerFactory.getLogger(CassandraManager.class);
 
   //Cassandra Host Name
   private final String host;
@@ -91,7 +94,7 @@ public class CassandraManager {
    */
   public void openConnection() throws MetaException {
     try {
-      Log.debug("open connection to host:port", host, port);
+      logger.debug("open connection to host:port - " + host + ":" + port);
       clientHolder =  new CassandraProxyClient(host, port, framedConnection, true);
     } catch (CassandraException e) {
       throw new MetaException("Unable to connect to the server " + e.getMessage());
@@ -103,6 +106,7 @@ public class CassandraManager {
    *
    */
   public void closeConnection() {
+      logger.debug("close connection to host:port - " + host + ":" + port);
       clientHolder.close();
   }
 
@@ -295,6 +299,7 @@ public class CassandraManager {
    */
   public void dropTable() throws MetaException {
     try {
+      logger.debug("drop column family : " + columnFamilyName);
       clientHolder.getProxyConnection().system_drop_column_family(columnFamilyName);
     } catch (TException e) {
       throw new MetaException("Unable to drop column family '" + columnFamilyName + "'. Error:"
