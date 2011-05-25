@@ -63,14 +63,14 @@ public class CassandraManager {
     this.host = cassandraHost;
 
     String cassandraPortStr = serdeParam.get(StandardColumnSerDe.CASSANDRA_PORT);
-    if (cassandraPortStr == null) {
-      cassandraPortStr = StandardColumnSerDe.DEFAULT_CASSANDRA_PORT;
-    }
-
-    try {
-      port = Integer.parseInt(cassandraPortStr);
-    } catch (NumberFormatException e) {
-      throw new MetaException(StandardColumnSerDe.CASSANDRA_PORT + " must be a number");
+    if (cassandraPortStr != null) {
+      try {
+        port = Integer.parseInt(cassandraPortStr);
+      } catch (NumberFormatException e) {
+        throw new MetaException(StandardColumnSerDe.CASSANDRA_PORT + " must be a number");
+      }
+    } else {
+      port = StandardColumnSerDe.DEFAULT_CASSANDRA_PORT;
     }
 
     this.tbl = tbl;

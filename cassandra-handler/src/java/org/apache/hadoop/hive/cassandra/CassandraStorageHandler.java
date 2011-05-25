@@ -1,7 +1,10 @@
 package org.apache.hadoop.hive.cassandra;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import org.apache.cassandra.thrift.KsDef;
 import org.apache.cassandra.thrift.NotFoundException;
@@ -14,14 +17,20 @@ import org.apache.hadoop.hive.metastore.MetaStoreUtils;
 import org.apache.hadoop.hive.metastore.api.Constants;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.Table;
+import org.apache.hadoop.hive.ql.index.IndexPredicateAnalyzer;
+import org.apache.hadoop.hive.ql.index.IndexSearchCondition;
 import org.apache.hadoop.hive.ql.metadata.HiveStorageHandler;
+import org.apache.hadoop.hive.ql.metadata.HiveStoragePredicateHandler;
+import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
 import org.apache.hadoop.hive.ql.plan.TableDesc;
+import org.apache.hadoop.hive.serde2.Deserializer;
 import org.apache.hadoop.hive.serde2.SerDe;
 import org.apache.hadoop.mapred.InputFormat;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputFormat;
 
 public class CassandraStorageHandler
-  implements HiveStorageHandler, HiveMetaHook {
+  implements HiveStorageHandler, HiveMetaHook, HiveStoragePredicateHandler {
 
   private Configuration configuration;
 
@@ -63,7 +72,8 @@ public class CassandraStorageHandler
       tableProperties.getProperty(StandardColumnSerDe.CASSANDRA_HOST, StandardColumnSerDe.DEFAULT_CASSANDRA_HOST));
 
     jobProperties.put(StandardColumnSerDe.CASSANDRA_PORT,
-      tableProperties.getProperty(StandardColumnSerDe.CASSANDRA_PORT, StandardColumnSerDe.DEFAULT_CASSANDRA_PORT));
+      tableProperties.getProperty(StandardColumnSerDe.CASSANDRA_PORT,
+                                  Integer.toString(StandardColumnSerDe.DEFAULT_CASSANDRA_PORT)));
 
     jobProperties.put(StandardColumnSerDe.CASSANDRA_PARTITIONER,
       tableProperties.getProperty(StandardColumnSerDe.CASSANDRA_PARTITIONER,
@@ -184,4 +194,64 @@ public class CassandraStorageHandler
   public void rollbackDropTable(Table table) throws MetaException {
     // nothing to do
   }
+
+
+  /**
+   * Cassandra requires the IdnexClause must containe at least one IndexExpression with an EQ operator
+   * on a configured index column. Other IndexExpression structs may be added to the IndexClause for non-indexed
+   * columns to further refine the results of the EQ expression.
+   *
+   * In order to push down the predicate filtering, we first get a list of indexed columns. If there are no indexed
+   * columns, we can't push down the predicate. We then walk down the predicate, and see if there is any filtering that
+   * matches the indexed columns. If there is no matching, we can't push down the predicate. For the matching that is
+   * found, we need to verify that there is at least one equal operator. If there is no equal operator, we can't push
+   * down the predicate.
+   */
+  @Override
+  public DecomposedPredicate decomposePredicate(
+    JobConf jobConf,
+    Deserializer deserializer,
+    ExprNodeDesc predicate)
+  {
+    try {
+      CassandraPushdownPredicate manager = new CassandraPushdownPredicate(jobConf);
+      Set<String> columnNames = manager.getIndexColumnNames();
+      if (columnNames.isEmpty()) {
+        //No column has been indexed.
+        return null;
+      }
+
+      IndexPredicateAnalyzer analyzer = manager.newIndexPredicateAnalyzer(columnNames);
+
+      List<IndexSearchCondition> searchConditions =
+        new ArrayList<IndexSearchCondition>();
+
+      ExprNodeDesc residualPredicate =
+        analyzer.analyzePredicate(predicate, searchConditions);
+
+      if (searchConditions.size() == 0) {
+        //There is nothing could be pushed down.
+        return null;
+      }
+
+      //Cassandra requires the IdnexClause must containe at least one IndexExpression with an EQ operator
+      //on a configured index column. Other IndexExpression structs may be added to the IndexClause for non-indexed
+      //columns to further refine the results of the EQ expression.
+      if (!manager.verify(searchConditions)) {
+        //We can't push the filters down.
+        return null;
+      }
+
+      DecomposedPredicate decomposedPredicate = new DecomposedPredicate();
+      decomposedPredicate.pushedPredicate = analyzer.translateSearchConditions(
+        searchConditions);
+      decomposedPredicate.residualPredicate = residualPredicate;
+
+      return decomposedPredicate;
+    } catch (CassandraException e) {
+      //We couldn't get the indexed column names from cassandra, return null and let hive handle the pushdown.
+      return null;
+    }
+  }
+
 }

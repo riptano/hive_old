@@ -45,7 +45,7 @@ public abstract class BaseCassandraConnectionTest extends TestCase {
           cassandra = new EmbeddedCassandraService();
           cassandra.start();
           client = new CassandraProxyClient(
-                  "127.0.0.1", 9170, true, true);
+                  "127.0.0.1", 9160, true, true);
           loadSchema();
       }
 

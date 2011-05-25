@@ -72,7 +72,7 @@ public class StandardColumnSerDe implements SerDe {
   public static final int DEFAULT_RANGE_BATCH_SIZE = 1000;
   public static final int DEFAULT_SLICE_PREDICATE_SIZE = 1000;
   public static final String DEFAULT_CASSANDRA_HOST = "localhost";
-  public static final String DEFAULT_CASSANDRA_PORT = "9160";
+  public static final int DEFAULT_CASSANDRA_PORT = 9160;
   public static final String DEFAULT_CONSISTENCY_LEVEL = "ONE";
 
   /* names of columns from SerdeParameters */

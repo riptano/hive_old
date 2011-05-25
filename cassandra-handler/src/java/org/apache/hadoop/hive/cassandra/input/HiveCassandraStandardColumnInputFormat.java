@@ -3,9 +3,11 @@ package org.apache.hadoop.hive.cassandra.input;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedMap;
 
 import org.apache.cassandra.db.IColumn;
@@ -13,13 +15,29 @@ import org.apache.cassandra.db.SuperColumn;
 import org.apache.cassandra.hadoop.ColumnFamilyInputFormat;
 import org.apache.cassandra.hadoop.ColumnFamilySplit;
 import org.apache.cassandra.hadoop.ConfigHelper;
+import org.apache.cassandra.thrift.CfDef;
+import org.apache.cassandra.thrift.ColumnDef;
+import org.apache.cassandra.thrift.IndexClause;
+import org.apache.cassandra.thrift.InvalidRequestException;
+import org.apache.cassandra.thrift.KsDef;
+import org.apache.cassandra.thrift.NotFoundException;
 import org.apache.cassandra.thrift.SlicePredicate;
 import org.apache.cassandra.thrift.SliceRange;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hive.cassandra.CassandraException;
+import org.apache.hadoop.hive.cassandra.CassandraProxyClient;
+import org.apache.hadoop.hive.cassandra.CassandraPushdownPredicate;
 import org.apache.hadoop.hive.cassandra.serde.StandardColumnSerDe;
+import org.apache.hadoop.hive.ql.exec.Utilities;
+import org.apache.hadoop.hive.ql.index.IndexPredicateAnalyzer;
+import org.apache.hadoop.hive.ql.index.IndexSearchCondition;
+import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
+import org.apache.hadoop.hive.ql.plan.TableScanDesc;
+import org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPEqual;
+import org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPEqualOrGreaterThan;
 import org.apache.hadoop.hive.serde2.ColumnProjectionUtils;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.MapWritable;
@@ -34,6 +52,7 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.thrift.TException;
 
 @SuppressWarnings("deprecation")
 public class HiveCassandraStandardColumnInputFormat extends
@@ -54,7 +73,6 @@ public class HiveCassandraStandardColumnInputFormat extends
     List<String> columns = StandardColumnSerDe
         .parseColumnMapping(cassandraSplit.getColumnMapping());
     isTransposed = StandardColumnSerDe.isTransposed(columns);
-
 
     List<Integer> readColIDs = ColumnProjectionUtils.getReadColumnIDs(jobConf);
 
@@ -101,6 +119,12 @@ public class HiveCassandraStandardColumnInputFormat extends
       ConfigHelper.setPartitioner(tac.getConfiguration(), cassandraSplit.getPartitioner());
       //Set Split Size
       ConfigHelper.setInputSplitSize(tac.getConfiguration(), cassandraSplit.getSplitSize());
+
+      IndexClause clause = parsePushdown(jobConf);
+      if (clause != null) {
+        //We have pushdown filtering from hive. We should use in query.
+        ConfigHelper.setInputIndexClause(tac.getConfiguration(), clause);
+      }
 
       recordReader.initialize(cfSplit, tac);
     } catch (InterruptedException ie) {
@@ -284,7 +308,8 @@ public class HiveCassandraStandardColumnInputFormat extends
         StandardColumnSerDe.CASSANDRA_SPLIT_SIZE,
         StandardColumnSerDe.DEFAULT_SPLIT_SIZE);
     String cassandraColumnMapping = jobConf.get(StandardColumnSerDe.CASSANDRA_COL_MAPPING);
-    int rpcPort = jobConf.getInt(StandardColumnSerDe.CASSANDRA_PORT, 9160);
+    int rpcPort = jobConf.getInt(StandardColumnSerDe.CASSANDRA_PORT,
+        StandardColumnSerDe.DEFAULT_CASSANDRA_PORT);
     String host = jobConf.get(StandardColumnSerDe.CASSANDRA_HOST);
     String partitioner = jobConf.get(StandardColumnSerDe.CASSANDRA_PARTITIONER);
 
@@ -307,6 +332,9 @@ public class HiveCassandraStandardColumnInputFormat extends
     ConfigHelper.setInputColumnFamily(jobConf, ks, cf);
     ConfigHelper.setRangeBatchSize(jobConf, sliceRangeSize);
     ConfigHelper.setInputSplitSize(jobConf, splitSize);
+
+    //Currently getSplites doesn't take filter pushdown into consideration, in the future
+    //it could possibly be used in getSplites.
 
     Job job = new Job(jobConf);
     JobContext jobContext = new JobContext(job.getConfiguration(), job.getJobID());
@@ -354,4 +382,61 @@ public class HiveCassandraStandardColumnInputFormat extends
 
     return results;
   }
+
+  /**
+   * Parse the filter pushdown.
+   *
+   * @param jobConf Job Configuration
+   *
+   * @return cassandra index clause, null when no pushdown filter is available
+   * @throws IOException
+   */
+  private IndexClause parsePushdown(JobConf jobConf) throws IOException {
+    String filterExprSerialized =
+      jobConf.get(TableScanDesc.FILTER_EXPR_CONF_STR);
+    if (filterExprSerialized == null) {
+      return null;
+    }
+
+    ExprNodeDesc filterExpr =
+      Utilities.deserializeExpression(filterExprSerialized, jobConf);
+
+    try {
+      CassandraPushdownPredicate manager = new CassandraPushdownPredicate(jobConf);
+
+      Set<String> columnNames = manager.getIndexColumnNames();
+      if (columnNames.isEmpty()) {
+        //No column has been indexed.
+        return null;
+      }
+
+      IndexPredicateAnalyzer analyzer = manager.newIndexPredicateAnalyzer(columnNames);
+
+      List<IndexSearchCondition> searchConditions =
+        new ArrayList<IndexSearchCondition>();
+
+      ExprNodeDesc residualPredicate =
+        analyzer.analyzePredicate(filterExpr, searchConditions);
+
+      // There should be no residual since we already negotiated
+      // that earlier in HBaseStorageHandler.decomposePredicate.
+      if (residualPredicate != null) {
+        throw new RuntimeException(
+          "Unexpected residual predicate " + residualPredicate.getExprString());
+      }
+
+      if (searchConditions.size() > 0) {
+        IndexClause clause = manager.translateSearchConditions(searchConditions);
+        return clause;
+      } else {
+        throw new RuntimeException(
+        "At least one search condition expected in push down");
+      }
+
+    } catch (CassandraException e) {
+      //We couldn't get the indexed column names from cassandra, we should stop from here and throw out hte error.
+      throw new IOException(e);
+    }
+  }
+
 }

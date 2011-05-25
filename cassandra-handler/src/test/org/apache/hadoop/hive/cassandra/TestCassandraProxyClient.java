@@ -23,7 +23,7 @@ public class TestCassandraProxyClient extends BaseCassandraConnectionTest {
 
     try {
       CassandraProxyClient client = new CassandraProxyClient(
-          "127.0.0.1", 9170, true, true);
+          "127.0.0.1", 9160, true, true);
       client.getProxyConnection().describe_keyspaces();
       fail("Fail this test.");
     } catch (CassandraException e) {

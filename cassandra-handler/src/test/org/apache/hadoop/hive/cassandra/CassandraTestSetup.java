@@ -37,7 +37,7 @@ public class CassandraTestSetup extends TestSetup{
 
     //Make sure that this server is connectable.
     CassandraProxyClient client = new CassandraProxyClient(
-        "127.0.0.1", 9170, true, true);
+        "127.0.0.1", 9160, true, true);
 
     client.getProxyConnection().describe_cluster_name();
 
