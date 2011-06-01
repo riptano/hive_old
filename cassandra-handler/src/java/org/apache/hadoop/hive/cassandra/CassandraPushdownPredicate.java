@@ -161,6 +161,7 @@ public class CassandraPushdownPredicate {
   public IndexClause translateSearchConditions(List<IndexSearchCondition> conditions)
     throws IOException {
     IndexClause clause = new IndexClause();
+    clause.setStart_key("".getBytes());
 
     List<IndexExpression> exps = new ArrayList<IndexExpression>();
     for (IndexSearchCondition thisCond : conditions) {

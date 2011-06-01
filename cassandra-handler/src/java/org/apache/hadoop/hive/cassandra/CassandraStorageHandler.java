@@ -29,6 +29,10 @@ import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputFormat;
 
+/**
+ * CassandraStorageHandler is the cassandra implementation of the hive storage handler.
+ *
+ */
 public class CassandraStorageHandler
   implements HiveStorageHandler, HiveMetaHook, HiveStoragePredicateHandler {
 
@@ -43,29 +47,24 @@ public class CassandraStorageHandler
     String dbName = tableProperties.getProperty(Constants.META_TABLE_DB);
 
     String keyspace = tableProperties.getProperty(StandardColumnSerDe.CASSANDRA_KEYSPACE_NAME);
-    String columnFamily = tableProperties.getProperty(StandardColumnSerDe.CASSANDRA_CF_NAME);
-    String columnInfo = tableProperties.getProperty(StandardColumnSerDe.CASSANDRA_COL_MAPPING);
-
     //Identify Keyspace
     if (keyspace == null) {
         keyspace = dbName;
     }
-
     jobProperties.put(StandardColumnSerDe.CASSANDRA_KEYSPACE_NAME, keyspace);
 
     //Identify ColumnFamily
+    String columnFamily = tableProperties.getProperty(StandardColumnSerDe.CASSANDRA_CF_NAME);
     if (columnFamily == null) {
         columnFamily = tableName;
     }
-
     jobProperties.put(StandardColumnSerDe.CASSANDRA_CF_NAME, columnFamily);
 
     //If no column mapping has been configured, we should create the default column mapping.
+    String columnInfo = tableProperties.getProperty(StandardColumnSerDe.CASSANDRA_COL_MAPPING);
     if(columnInfo == null) {
-      columnInfo = StandardColumnSerDe.createColumnMappingString(
-        tableProperties.getProperty(org.apache.hadoop.hive.serde.Constants.LIST_COLUMNS));
+      columnInfo = StandardColumnSerDe.createColumnMappingString(tableProperties);
     }
-
     jobProperties.put(StandardColumnSerDe.CASSANDRA_COL_MAPPING, columnInfo);
 
     jobProperties.put(StandardColumnSerDe.CASSANDRA_HOST,
@@ -97,6 +96,12 @@ public class CassandraStorageHandler
     jobProperties.put(StandardColumnSerDe.CASSANDRA_SPLIT_SIZE,
       tableProperties.getProperty(StandardColumnSerDe.CASSANDRA_SPLIT_SIZE,
           Integer.toString(StandardColumnSerDe.DEFAULT_SPLIT_SIZE)));
+
+    //Set the indexed column names
+    String indexedColumns = tableProperties.getProperty(StandardColumnSerDe.CASSANDRA_INDEXED_COLUMNS);
+    if (indexedColumns != null) {
+      jobProperties.put(StandardColumnSerDe.CASSANDRA_INDEXED_COLUMNS, indexedColumns);
+    }
   }
 
   @Override

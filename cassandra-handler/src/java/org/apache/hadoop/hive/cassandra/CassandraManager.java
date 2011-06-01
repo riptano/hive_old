@@ -1,25 +1,30 @@
 package org.apache.hadoop.hive.cassandra;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.cassandra.thrift.CfDef;
+import org.apache.cassandra.thrift.ColumnDef;
+import org.apache.cassandra.thrift.IndexType;
 import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.cassandra.thrift.KsDef;
 import org.apache.cassandra.thrift.NotFoundException;
 import org.apache.cassandra.thrift.SchemaDisagreementException;
+import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.hadoop.hive.cassandra.serde.StandardColumnSerDe;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.thrift.TException;
-import org.apache.thrift.transport.TTransport;
 
 /**
  * A class to handle the transaction to cassandra backend database.
  *
  */
 public class CassandraManager {
-  final static public int DEFAULT_REPLICATION_FACTOR = 1;
-  final static public String DEFAULT_STRATEGY = "org.apache.cassandra.locator.SimpleStrategy";
+  public static final int DEFAULT_REPLICATION_FACTOR = 1;
+  public static final String DEFAULT_STRATEGY = "org.apache.cassandra.locator.SimpleStrategy";
 
   //Cassandra Host Name
   private final String host;
@@ -30,15 +35,8 @@ public class CassandraManager {
   //Cassandra proxy client
   private CassandraProxyClient clientHolder;
 
-
-  //TTransport
-  private TTransport trans;
-
   //Whether or not use framed connection
   private boolean framedConnection;
-
-  //Whether or not use randomized method to pick up the next server
-  private boolean randomizedConnection;
 
   //table property
   private final Table tbl;
@@ -81,7 +79,6 @@ public class CassandraManager {
     this.keyspace = getCassandraKeyspace();
     this.columnFamilyName = getCassandraColumnFamily();
     this.framedConnection = true;
-    this.randomizedConnection = true;
   }
 
   /**
@@ -138,6 +135,30 @@ public class CassandraManager {
   }
 
   /**
+   * Get CfDef based on the configuration in the table.
+   */
+  private CfDef getCfDef() {
+    CfDef cf = new CfDef();
+    cf.setKeyspace(keyspace);
+    cf.setName(columnFamilyName);
+
+    //List<String> columnNames = StandardColumnSerDe.parseOrCreateColumnMapping();
+
+    List<String> indexedCol = getIndexedColumnNames();
+    if (indexedCol != null) {
+      List<ColumnDef> indexedColDef = new ArrayList<ColumnDef>(indexedCol.size());
+      for (String thisCol : indexedCol) {
+        indexedColDef.add(
+            new ColumnDef(ByteBufferUtil.bytes(thisCol), "BytesType")
+              .setIndex_type(IndexType.KEYS).setIndex_name(thisCol));
+      }
+      cf.setColumn_metadata(indexedColDef);
+    }
+
+    return cf;
+  }
+
+  /**
    * Create a keyspace with columns defined in the table.
    */
   public KsDef createKeyspaceWithColumns()
@@ -148,11 +169,7 @@ public class CassandraManager {
       ks.setReplication_factor(getReplicationFactor());
       ks.setStrategy_class(getStrategy());
 
-      CfDef cf = new CfDef();
-      cf.setKeyspace(keyspace);
-      cf.setName(columnFamilyName);
-
-      ks.addToCf_defs(cf);
+      ks.addToCf_defs(getCfDef());
 
       clientHolder.getProxyConnection().system_add_keyspace(ks);
       clientHolder.getProxyConnection().set_keyspace(keyspace);
@@ -189,9 +206,8 @@ public class CassandraManager {
    * Create column family based on the configuration in the table.
    */
   public CfDef createColumnFamily() throws MetaException {
-    CfDef cf = new CfDef();
-    cf.setKeyspace(keyspace);
-    cf.setName(columnFamilyName);
+    CfDef cf = getCfDef();
+
     try {
       clientHolder.getProxyConnection().set_keyspace(keyspace);
       clientHolder.getProxyConnection().system_add_column_family(cf);
@@ -239,6 +255,20 @@ public class CassandraManager {
     } else {
       return prop;
     }
+  }
+
+  /**
+   * Get indexed column names from the table property.
+   *
+   * @return a list of indexed column names
+   */
+  private List<String> getIndexedColumnNames() {
+    String prop = getPropertyFromTable(StandardColumnSerDe.CASSANDRA_INDEXED_COLUMNS);
+    if (prop == null) {
+      return null;
+    }
+
+    return Arrays.asList(prop.split(StandardColumnSerDe.DELIMITER));
   }
 
   /**

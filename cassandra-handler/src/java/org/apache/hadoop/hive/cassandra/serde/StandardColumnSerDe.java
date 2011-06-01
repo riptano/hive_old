@@ -4,9 +4,11 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -54,6 +56,7 @@ public class StandardColumnSerDe implements SerDe {
   public static final String CASSANDRA_PORT = "cassandra.port"; // rcpPort
   public static final String CASSANDRA_PARTITIONER = "cassandra.partitioner"; // partitioner
   public static final String CASSANDRA_COL_MAPPING = "cassandra.columns.mapping";
+  public static final String CASSANDRA_INDEXED_COLUMNS = "cassandra.indexed.columns";
 
   public static final String CASSANDRA_SPECIAL_COLUMN_KEY = "row_key";
   public static final String CASSANDRA_SPECIAL_COLUMN_COL = "column_name";
@@ -74,11 +77,15 @@ public class StandardColumnSerDe implements SerDe {
   public static final String DEFAULT_CASSANDRA_HOST = "localhost";
   public static final int DEFAULT_CASSANDRA_PORT = 9160;
   public static final String DEFAULT_CONSISTENCY_LEVEL = "ONE";
+  public static final String DELIMITER = ",";
 
   /* names of columns from SerdeParameters */
   private List<String> cassandraColumnNames;
   /* index of key column in results */
   private int iKey;
+
+  // names of the index column
+  private List<String> cassandraIndexedColNames;
 
   private ObjectInspector cachedObjectInspector;
   private SerDeParameters serdeParams;
@@ -124,9 +131,9 @@ public class StandardColumnSerDe implements SerDe {
   /**
    * Initialize the cassandra serialization and deserialization parameters from table properties and configuration.
    *
-   * @param job
-   * @param tbl
-   * @param serdeName
+   * @param job job configuration
+   * @param tbl table properties
+   * @param serdeName serde class name
    * @throws SerDeException
    */
   private void initCassandraSerDeParameters(Configuration job, Properties tbl, String serdeName)
@@ -150,7 +157,7 @@ public class StandardColumnSerDe implements SerDe {
       }
     }
 
-    cassandraColumnNames = parseOrCreateColumnMapping(tbl, tbl.getProperty(Constants.LIST_COLUMNS));
+    cassandraColumnNames = parseOrCreateColumnMapping(tbl);
 
     iKey = cassandraColumnNames.indexOf(StandardColumnSerDe.CASSANDRA_KEY_COLUMN);
 
@@ -165,6 +172,9 @@ public class StandardColumnSerDe implements SerDe {
           cassandraColumnNames.size() + " elements" +
           " (counting the key if implicit)");
     }
+
+    //Check to see if indexed column names match the column mapping.
+    cassandraIndexedColNames = verifyIndexColumnNames(tbl, cassandraColumnNames);
 
     separators = serdeParams.getSeparators();
     escaped = serdeParams.isEscaped();
@@ -427,24 +437,46 @@ public class StandardColumnSerDe implements SerDe {
    * columns using the default mapping.
    *
    * @param tbl table properties
-   * @param tblColumnStr table column names
    * @return A list of column names
    * @throws SerDeException
    */
-  public static List<String> parseOrCreateColumnMapping(Properties tbl, String tblColumnStr) throws SerDeException {
-
+  public static List<String> parseOrCreateColumnMapping(Properties tbl) throws SerDeException {
     String prop = tbl.getProperty(CASSANDRA_COL_MAPPING);
 
     if (prop != null) {
       return parseColumnMapping(prop);
-    } else if (tblColumnStr != null) {
+    } else {
       //auto-create
-      String mappingStr = createColumnMappingString(tblColumnStr);
+      String mappingStr = createColumnMappingString(tbl);
 
       return Arrays.asList(mappingStr.split(","));
-    } else {
-      throw new SerDeException("Can't find table column definitions");
     }
+  }
+
+  /**
+   * Parse the indexed column name from table properties.
+   * @param tbl table properties
+   * @return
+   */
+  private List<String> verifyIndexColumnNames(Properties tbl, List<String> columnNames) throws SerDeException {
+    String prop = tbl.getProperty(CASSANDRA_INDEXED_COLUMNS);
+    if (prop == null) {
+      return null;
+    }
+
+    String[] indexedNames = prop.split(DELIMITER);
+    Set<String> columnSet = new HashSet<String> ();
+    for (String thisCol : columnNames) {
+      columnSet.add(thisCol);
+    }
+
+    for (String thisName : indexedNames) {
+      if (!columnSet.contains(thisName)) {
+        throw new SerDeException("Indexed column name " +thisName + " is not defined in the schema.");
+      }
+    }
+
+    return Arrays.asList(indexedNames);
   }
 
   /*
@@ -452,8 +484,9 @@ public class StandardColumnSerDe implements SerDe {
    * This would be triggered when no cassandra.columns.mapping has been defined
    * in the user query.
    */
-  public static String createColumnMappingString(String tblColumnStr)
+  public static String createColumnMappingString(Properties tbl)
   {
+    String tblColumnStr = tbl.getProperty(Constants.LIST_COLUMNS);
     if(tblColumnStr == null || tblColumnStr.trim().isEmpty()) {
       throw new IllegalArgumentException("table must have columns");
     }
@@ -585,7 +618,7 @@ public class StandardColumnSerDe implements SerDe {
     return columnList;
   }
 
-  public static List<byte[]> initColumnNamesBytes(List<String> columnNames) {
+  private List<byte[]> initColumnNamesBytes(List<String> columnNames) {
     List<byte[]> columnBytes = new ArrayList<byte[]>();
 
     for (String column : columnNames) {
