@@ -10,6 +10,7 @@ import java.util.SortedMap;
 
 import org.apache.cassandra.db.IColumn;
 import org.apache.cassandra.db.SuperColumn;
+import org.apache.cassandra.db.context.CounterContext;
 import org.apache.cassandra.hadoop.ColumnFamilyInputFormat;
 import org.apache.cassandra.hadoop.ColumnFamilySplit;
 import org.apache.cassandra.hadoop.ConfigHelper;
@@ -203,7 +204,7 @@ public class HiveCassandraStandardColumnInputFormat extends
                 // Value
                 hic = new HiveIColumn();
                 hic.setName(StandardColumnSerDe.CASSANDRA_VALUE_COLUMN.getBytes());
-                hic.setValue(ByteBufferUtil.getArray(subCol.value()));
+                hic.setValue(getColumnValueBytes(subCol));
                 hic.setTimestamp(subCol.timestamp());
 
                 theMap.put(
@@ -214,7 +215,7 @@ public class HiveCassandraStandardColumnInputFormat extends
                 // Value
                 hic = new HiveIColumn();
                 hic.setName(StandardColumnSerDe.CASSANDRA_VALUE_COLUMN.getBytes());
-                hic.setValue(ByteBufferUtil.getArray(entry.getValue().value()));
+                hic.setValue(getColumnValueBytes(entry.getValue()));
                 hic.setTimestamp(entry.getValue().timestamp());
 
                 theMap.put(
@@ -239,7 +240,7 @@ public class HiveCassandraStandardColumnInputFormat extends
                 HiveIColumn hic = new HiveIColumn();
                 byte[] name = ByteBufferUtil.getArray(entry.getValue().name());
                 hic.setName(name);
-                hic.setValue(ByteBufferUtil.getArray(entry.getValue().value()));
+                hic.setValue(getColumnValueBytes(entry.getValue()));
                 hic.setTimestamp(entry.getValue().timestamp());
                 theMap.put(new BytesWritable(name), hic);
               }
@@ -358,5 +359,18 @@ public class HiveCassandraStandardColumnInputFormat extends
     }
 
     return results;
+  }
+
+  /**
+   * Get the bytes for the Cassandra column value
+   * @param column
+   * @return
+   */
+  private byte[] getColumnValueBytes(IColumn column)
+  {
+      if (column instanceof org.apache.cassandra.db.CounterColumn)
+        return ByteBufferUtil.getArray(ByteBufferUtil.bytes(CounterContext.instance().total(column.value())));
+
+      return ByteBufferUtil.getArray(column.value());
   }
 }
