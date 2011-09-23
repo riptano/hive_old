@@ -10,6 +10,8 @@ import java.util.SortedMap;
 
 import org.apache.cassandra.db.IColumn;
 import org.apache.cassandra.db.SuperColumn;
+import org.apache.cassandra.db.marshal.AbstractType;
+import org.apache.cassandra.db.marshal.BytesType;
 import org.apache.cassandra.hadoop.ColumnFamilyInputFormat;
 import org.apache.cassandra.hadoop.ColumnFamilySplit;
 import org.apache.cassandra.hadoop.ConfigHelper;
@@ -74,11 +76,25 @@ public class HiveCassandraStandardColumnInputFormat extends
     SlicePredicate predicate = new SlicePredicate();
 
     if (isTransposed || readColIDs.size() == columns.size() || readColIDs.size() == 0) {
-      //We are reading all columns
       SliceRange range = new SliceRange();
-      range.setStart(new byte[0]);
-      range.setFinish(new byte[0]);
-      range.setReversed(false);
+      AbstractType comparator = null;
+      String comparatorType = jobConf.get(StandardColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_COMPARATOR);
+      if (!comparatorType.equals("")) {
+        try {
+          comparator = (AbstractType)Class.forName(comparatorType).getDeclaredField("instance").get(null);
+        } catch (ClassNotFoundException ex) {
+          comparator = BytesType.instance;
+        } catch (IllegalAccessException ex) {
+          comparator = BytesType.instance;
+        } catch (NoSuchFieldException ex) {
+          comparator = BytesType.instance;
+        }
+      } else {
+        comparator = BytesType.instance;
+      }
+      range.setStart(comparator.fromString(jobConf.get(StandardColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_START)));
+      range.setFinish(comparator.fromString(jobConf.get(StandardColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_FINISH)));
+      range.setReversed(jobConf.get(StandardColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_REVERSED).equals("true"));
       range.setCount(cassandraSplit.getSlicePredicateSize());
       predicate.setSlice_range(range);
     } else {
