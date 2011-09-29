@@ -8,10 +8,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 
+import org.apache.cassandra.config.ConfigurationException;
 import org.apache.cassandra.db.IColumn;
 import org.apache.cassandra.db.SuperColumn;
 import org.apache.cassandra.db.marshal.AbstractType;
 import org.apache.cassandra.db.marshal.BytesType;
+import org.apache.cassandra.db.marshal.TypeParser;
 import org.apache.cassandra.hadoop.ColumnFamilyInputFormat;
 import org.apache.cassandra.hadoop.ColumnFamilySplit;
 import org.apache.cassandra.hadoop.ConfigHelper;
@@ -77,20 +79,14 @@ public class HiveCassandraStandardColumnInputFormat extends
 
     if (isTransposed || readColIDs.size() == columns.size() || readColIDs.size() == 0) {
       SliceRange range = new SliceRange();
-      AbstractType comparator = null;
+      AbstractType comparator = BytesType.instance;
       String comparatorType = jobConf.get(StandardColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_COMPARATOR);
       if (!comparatorType.equals("")) {
         try {
-          comparator = (AbstractType)Class.forName(comparatorType).getDeclaredField("instance").get(null);
-        } catch (ClassNotFoundException ex) {
-          comparator = BytesType.instance;
-        } catch (IllegalAccessException ex) {
-          comparator = BytesType.instance;
-        } catch (NoSuchFieldException ex) {
-          comparator = BytesType.instance;
+          comparator = TypeParser.parse(comparatorType);
+        } catch (ConfigurationException ex) {
+          throw new IOException("Comparator class not found.");
         }
-      } else {
-        comparator = BytesType.instance;
       }
       range.setStart(comparator.fromString(jobConf.get(StandardColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_START)));
       range.setFinish(comparator.fromString(jobConf.get(StandardColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_FINISH)));
