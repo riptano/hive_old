@@ -50,6 +50,8 @@ public class CassandraTestSetup extends TestSetup {
   private final ByteBuffer LONG_KEY = ByteBufferUtil.bytes(LONG_STR);
   private final String INT_STR = "countInt";
   private final ByteBuffer INT_KEY = ByteBufferUtil.bytes(INT_STR);
+  private final String DOUBLE_STR = "doubleInt";
+  private final ByteBuffer DOUBLE_KEY = ByteBufferUtil.bytes(DOUBLE_STR);
   private final String UTF8_STR = "utf8";
   private final ByteBuffer UTF8_KEY = ByteBufferUtil.bytes(UTF8_STR);
   private final String COUNTER_LONG_STR = "counterColumnLong";
@@ -135,7 +137,10 @@ public class CassandraTestSetup extends TestSetup {
                           setIndex_name(LONG_STR),
                       new ColumnDef(INT_KEY, "IntegerType").
                           setIndex_type(IndexType.KEYS).
-                          setIndex_name(INT_STR)));
+                          setIndex_name(INT_STR),
+                          new ColumnDef(DOUBLE_KEY, "DoubleType").
+                          setIndex_type(IndexType.KEYS).
+                          setIndex_name(DOUBLE_STR)));
 
     ks.addToCf_defs(cf);
     client.getProxyConnection().system_add_keyspace(ks);
@@ -163,6 +168,11 @@ public class CassandraTestSetup extends TestSetup {
       INT_STR.getBytes(),
       ByteBufferUtil.bytes((int)234),
       timestamp);
+
+    addColumnToMutation(mutationList,
+        DOUBLE_STR.getBytes(),
+        ByteBufferUtil.bytes(1.23),
+        timestamp);
 
     map1.put(CF, mutationList);
 

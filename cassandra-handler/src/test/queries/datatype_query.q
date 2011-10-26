@@ -19,36 +19,41 @@ DROP TABLE cf_demo_TBL;
 CREATE EXTERNAL TABLE cf_demo_TBL(row_key STRING,
                                              uniqueid String,
                                              countLong BIGINT,
-                                             countInt INT)
+                                             countInt INT,
+                                             countDouble DOUBLE)
       STORED BY 'org.apache.hadoop.hive.cassandra.CassandraStorageHandler'
       WITH SERDEPROPERTIES ("cassandra.port" = "9170",
                             "cassandra.columns.mapping" = ":key,
                                                            uniqueid,
                                                            countLong,
-                                                           countInt")
+                                                           countInt,
+                                                           countDouble")
       TBLPROPERTIES ("cassandra.ks.name" = "ks_demo",
                      "cassandra.slice.predicate.size" = "100",
                      "cassandra.cf.name" = "cf_demo");
 
 --Skip uiniqueid as invalid characters will show up
-select row_key, countLong, countInt from cf_demo_TBL;
+select row_key, countLong, countInt, countDouble from cf_demo_TBL;
 
 --Test cassandra.cf.validatorType setting
 DROP TABLE IF EXISTS cf_demo_TBL;
 CREATE EXTERNAL TABLE cf_demo_TBL(row_key STRING,
                                              uniqueid String,
                                              countLong BIGINT,
-                                             countInt INT)
+                                             countInt INT,
+                                             countDouble DOUBLE)
       STORED BY 'org.apache.hadoop.hive.cassandra.CassandraStorageHandler'
       WITH SERDEPROPERTIES ("cassandra.port" = "9170",
                             "cassandra.columns.mapping" = ":key,
                                                            uniqueid,
                                                            countLong,
-                                                           countInt",
+                                                           countInt,
+                                                           countDouble",
                             "cassandra.cf.validatorType" = "UTF8Type,
                                                             LexicalUUIDType,
                                                             LongType,
-                                                            IntegerType")
+                                                            IntegerType,
+                                                            DoubleType")
       TBLPROPERTIES ("cassandra.ks.name" = "ks_demo",
                      "cassandra.slice.predicate.size" = "100",
                      "cassandra.cf.name" = "cf_demo");
