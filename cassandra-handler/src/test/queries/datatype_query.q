@@ -74,8 +74,21 @@ CREATE EXTERNAL TABLE cf_demo_TBL(row_key STRING,
 
 select row_key, uniqueid, countLong, countInt from cf_demo_TBL;
 
+DROP TABLE IF EXISTS cf_demo_TBL;
+CREATE EXTERNAL TABLE cf_demo_TBL
+(registry_id string, colname string, colvalue string)
+STORED BY 'org.apache.hadoop.hive.cassandra.CassandraStorageHandler'
+WITH SERDEPROPERTIES ("cassandra.columns.mapping" = ":key,:column,:value", "cassandra.port"="9170")
+tblproperties ("cassandra.range.size" = "10000000",
+"cassandra.ks.name" = "ks_demo",
+"cassandra.cf.name" = "cf_demo",
+"cassandra.slice.predicate.size" = "100000000");
+-- Test range ghost query
+select * from cf_demo_TBL;
+
 --Test super column family
 DROP TABLE IF EXISTS super_demo_TBL;
+
 CREATE EXTERNAL TABLE super_demo_TBL(row_key STRING,
                                      uniqueid String,
                                      countLong BIGINT,

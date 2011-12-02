@@ -14,17 +14,7 @@ import org.apache.cassandra.contrib.utils.service.CassandraServiceDataCleaner;
 import org.apache.cassandra.db.marshal.LexicalUUIDType;
 import org.apache.cassandra.hadoop.ColumnFamilyInputFormat;
 import org.apache.cassandra.service.EmbeddedCassandraService;
-import org.apache.cassandra.thrift.Cassandra;
-import org.apache.cassandra.thrift.CfDef;
-import org.apache.cassandra.thrift.Column;
-import org.apache.cassandra.thrift.ColumnDef;
-import org.apache.cassandra.thrift.ColumnOrSuperColumn;
-import org.apache.cassandra.thrift.ConsistencyLevel;
-import org.apache.cassandra.thrift.CounterColumn;
-import org.apache.cassandra.thrift.IndexType;
-import org.apache.cassandra.thrift.KsDef;
-import org.apache.cassandra.thrift.Mutation;
-import org.apache.cassandra.thrift.SuperColumn;
+import org.apache.cassandra.thrift.*;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -54,6 +44,8 @@ public class CassandraTestSetup extends TestSetup {
   private final ByteBuffer UTF8_KEY = ByteBufferUtil.bytes(UTF8_STR);
   private final String COUNTER_LONG_STR = "counterColumnLong";
   private final ByteBuffer COUNTER_LONG_KEY = ByteBufferUtil.bytes(COUNTER_LONG_STR);
+  private final String GHOST_STR = "ghost";
+  private final ByteBuffer GHOST_KEY = ByteBufferUtil.bytes(GHOST_STR);
 
   public CassandraTestSetup(Test test) {
     super(test);
@@ -168,7 +160,27 @@ public class CassandraTestSetup extends TestSetup {
 
     mutation_map.put(ByteBufferUtil.bytes("rowKey1"), map1);
 
+    // Setup the ghost row
+    List<Mutation> ghostColumns = new ArrayList<Mutation>();
+    Map<String, List<Mutation>> ghostMap = new HashMap<String, List<Mutation>>();
+    ByteBuffer ghostKey = ByteBufferUtil.bytes("ghostKey");
+
+    addColumnToMutation(ghostColumns,
+      LONG_STR.getBytes(),
+      ByteBufferUtil.bytes((long)1234),
+      timestamp);
+
+    ghostMap.put(CF, ghostColumns);
+
+    mutation_map.put(ByteBufferUtil.bytes("ghostKey"), ghostMap);
+
+    // submit all of the above mutations to the server
     client.getProxyConnection().batch_mutate(mutation_map, ConsistencyLevel.ONE);
+
+    // now create the ghost by deleting the row
+    ColumnPath cp = new ColumnPath();
+    cp.column_family = CF;
+    client.getProxyConnection().remove(ghostKey, cp, timestamp + 1, ConsistencyLevel.ONE);
   }
 
   private void addColumnToMutation(List<Mutation> mutationList, byte[] key, ByteBuffer value, long timestamp) {
