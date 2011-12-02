@@ -151,25 +151,16 @@ public class HiveCassandraStandardColumnInputFormat extends
           // per cassandra column
           if (isTransposed) {
             if (currentRecordIterator == null || !currentRecordIterator.hasNext()) {
-              while (true) {
-                next = recordReader.nextKeyValue();
-                if (next) {
-                  currentRecordIterator = recordReader.getCurrentValue().entrySet().iterator();
-
-                  // DSP-465: skip range ghosts
-                  if (!currentRecordIterator.hasNext())
-                    continue;
-
-                  subcolumnIterator = null;
-                  currentEntry = null;
-                } else {
-                  //More sub columns for super columns.
-                  if (subcolumnIterator != null && subcolumnIterator.hasNext()) {
-                    next = true;
-                  }
+              next = recordReader.nextKeyValue();
+              if (next) {
+                currentRecordIterator = recordReader.getCurrentValue().entrySet().iterator();
+                subcolumnIterator = null;
+                currentEntry = null;
+              } else {
+                //More sub columns for super columns.
+                if (subcolumnIterator != null && subcolumnIterator.hasNext()) {
+                  next = true;
                 }
-
-                break;
               }
             } else {
               next = true;
@@ -179,65 +170,74 @@ public class HiveCassandraStandardColumnInputFormat extends
               rowKey.set(ByteBufferUtil.getArray(recordReader.getCurrentKey()));
               MapWritable theMap = new MapWritable();
               Map.Entry<ByteBuffer, IColumn> entry = currentEntry;
+              boolean hasEmptyRow = false;
+
               if (subcolumnIterator == null || !subcolumnIterator.hasNext()) {
-                entry = currentRecordIterator.next();
-                currentEntry = entry;
-                subcolumnIterator = null;
+                // DSP-465: detect range ghosts and return an empty row
+                if (currentRecordIterator.hasNext()) {
+                  entry = currentRecordIterator.next();
+                  currentEntry = entry;
+                  subcolumnIterator = null;
+                }
+                else {
+                  hasEmptyRow = true;
+                }
               }
 
-              //is this a super column
-              boolean superColumn = entry.getValue() instanceof SuperColumn;
+              if (!hasEmptyRow) {
+                //is this a super column
+                boolean superColumn = entry.getValue() instanceof SuperColumn;
 
-              // Column name
-              HiveIColumn hic = new HiveIColumn();
-              hic.setName(StandardColumnSerDe.CASSANDRA_COLUMN_COLUMN.getBytes());
-              hic.setValue(ByteBufferUtil.getArray(entry.getValue().name()));
-              if (!superColumn) {
-                hic.setTimestamp(entry.getValue().timestamp());
-              }
-
-              theMap.put(new BytesWritable(StandardColumnSerDe.CASSANDRA_COLUMN_COLUMN.getBytes()),
-                  hic);
-
-              // SubColumn?
-              if (superColumn) {
-                if (subcolumnIterator == null) {
-                  subcolumnIterator = ((SuperColumn) entry.getValue()).getSubColumns().iterator();
+                // Column name
+                HiveIColumn hic = new HiveIColumn();
+                hic.setName(StandardColumnSerDe.CASSANDRA_COLUMN_COLUMN.getBytes());
+                hic.setValue(ByteBufferUtil.getArray(entry.getValue().name()));
+                if (!superColumn) {
+                  hic.setTimestamp(entry.getValue().timestamp());
                 }
 
-                IColumn subCol = subcolumnIterator.next();
+                theMap.put(new BytesWritable(StandardColumnSerDe.CASSANDRA_COLUMN_COLUMN.getBytes()),
+                    hic);
 
-                // Subcolumn name
-                hic = new HiveIColumn();
-                hic.setName(StandardColumnSerDe.CASSANDRA_SUBCOLUMN_COLUMN.getBytes());
-                hic.setValue(ByteBufferUtil.getArray(subCol.name()));
-                hic.setTimestamp(subCol.timestamp());
+                // SubColumn?
+                if (superColumn) {
+                  if (subcolumnIterator == null) {
+                    subcolumnIterator = ((SuperColumn) entry.getValue()).getSubColumns().iterator();
+                  }
 
-                theMap.put(new BytesWritable(StandardColumnSerDe.CASSANDRA_SUBCOLUMN_COLUMN
-                    .getBytes()), hic);
+                  IColumn subCol = subcolumnIterator.next();
 
-                // Value
-                hic = new HiveIColumn();
-                hic.setName(StandardColumnSerDe.CASSANDRA_VALUE_COLUMN.getBytes());
-                hic.setValue(ByteBufferUtil.getArray(subCol.value()));
-                hic.setTimestamp(subCol.timestamp());
+                  // Subcolumn name
+                  hic = new HiveIColumn();
+                  hic.setName(StandardColumnSerDe.CASSANDRA_SUBCOLUMN_COLUMN.getBytes());
+                  hic.setValue(ByteBufferUtil.getArray(subCol.name()));
+                  hic.setTimestamp(subCol.timestamp());
 
-                theMap.put(
-                    new BytesWritable(StandardColumnSerDe.CASSANDRA_VALUE_COLUMN.getBytes()), hic);
+                  theMap.put(new BytesWritable(StandardColumnSerDe.CASSANDRA_SUBCOLUMN_COLUMN
+                      .getBytes()), hic);
 
-              } else {
+                  // Value
+                  hic = new HiveIColumn();
+                  hic.setName(StandardColumnSerDe.CASSANDRA_VALUE_COLUMN.getBytes());
+                  hic.setValue(ByteBufferUtil.getArray(subCol.value()));
+                  hic.setTimestamp(subCol.timestamp());
 
-                // Value
-                hic = new HiveIColumn();
-                hic.setName(StandardColumnSerDe.CASSANDRA_VALUE_COLUMN.getBytes());
-                hic.setValue(ByteBufferUtil.getArray(entry.getValue().value()));
-                hic.setTimestamp(entry.getValue().timestamp());
+                  theMap.put(
+                      new BytesWritable(StandardColumnSerDe.CASSANDRA_VALUE_COLUMN.getBytes()), hic);
 
-                theMap.put(
-                    new BytesWritable(StandardColumnSerDe.CASSANDRA_VALUE_COLUMN.getBytes()), hic);
+                } else {
 
+                  // Value
+                  hic = new HiveIColumn();
+                  hic.setName(StandardColumnSerDe.CASSANDRA_VALUE_COLUMN.getBytes());
+                  hic.setValue(ByteBufferUtil.getArray(entry.getValue().value()));
+                  hic.setTimestamp(entry.getValue().timestamp());
+
+                  theMap.put(
+                      new BytesWritable(StandardColumnSerDe.CASSANDRA_VALUE_COLUMN.getBytes()), hic);
+
+                }
               }
-
 
               // Done
               value.setKey(rowKey);
