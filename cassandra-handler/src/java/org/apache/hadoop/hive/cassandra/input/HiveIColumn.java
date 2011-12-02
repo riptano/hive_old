@@ -187,11 +187,6 @@ public class HiveIColumn implements IColumn, Writable {
   }
 
   @Override
-  public long minTimestamp() {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public IColumn reconcile(IColumn arg0, Allocator arg1) {
     throw new UnsupportedOperationException();
   }
