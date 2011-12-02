@@ -151,16 +151,25 @@ public class HiveCassandraStandardColumnInputFormat extends
           // per cassandra column
           if (isTransposed) {
             if (currentRecordIterator == null || !currentRecordIterator.hasNext()) {
-              next = recordReader.nextKeyValue();
-              if (next) {
-                currentRecordIterator = recordReader.getCurrentValue().entrySet().iterator();
-                subcolumnIterator = null;
-                currentEntry = null;
-              } else {
-                //More sub columns for super columns.
-                if (subcolumnIterator != null && subcolumnIterator.hasNext()) {
-                  next = true;
+              while (true) {
+                next = recordReader.nextKeyValue();
+                if (next) {
+                  currentRecordIterator = recordReader.getCurrentValue().entrySet().iterator();
+
+                  // DSP-465: skip range ghosts
+                  if (!currentRecordIterator.hasNext())
+                    continue;
+
+                  subcolumnIterator = null;
+                  currentEntry = null;
+                } else {
+                  //More sub columns for super columns.
+                  if (subcolumnIterator != null && subcolumnIterator.hasNext()) {
+                    next = true;
+                  }
                 }
+
+                break;
               }
             } else {
               next = true;
