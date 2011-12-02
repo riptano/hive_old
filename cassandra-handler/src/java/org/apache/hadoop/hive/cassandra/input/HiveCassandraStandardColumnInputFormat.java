@@ -150,41 +150,43 @@ public class HiveCassandraStandardColumnInputFormat extends
           // In the case that we are transposing we create a fixed set of columns
           // per cassandra column
           if (isTransposed) {
-            if (currentRecordIterator == null || !currentRecordIterator.hasNext()) {
-              next = recordReader.nextKeyValue();
-              if (next) {
-                currentRecordIterator = recordReader.getCurrentValue().entrySet().iterator();
-                subcolumnIterator = null;
-                currentEntry = null;
-              } else {
-                //More sub columns for super columns.
-                if (subcolumnIterator != null && subcolumnIterator.hasNext()) {
-                  next = true;
-                }
-              }
-            } else {
-              next = true;
-            }
-
-            if (next) {
-              rowKey.set(ByteBufferUtil.getArray(recordReader.getCurrentKey()));
-              MapWritable theMap = new MapWritable();
-              Map.Entry<ByteBuffer, IColumn> entry = currentEntry;
-              boolean hasEmptyRow = false;
-
-              if (subcolumnIterator == null || !subcolumnIterator.hasNext()) {
-                // DSP-465: detect range ghosts and return an empty row
-                if (currentRecordIterator.hasNext()) {
-                  entry = currentRecordIterator.next();
-                  currentEntry = entry;
+            // This loop is exited almost every time with the break at the end,
+            // see DSP-465 note below
+            while (true) {
+              if (currentRecordIterator == null || !currentRecordIterator.hasNext()) {
+                next = recordReader.nextKeyValue();
+                if (next) {
+                  currentRecordIterator = recordReader.getCurrentValue().entrySet().iterator();
                   subcolumnIterator = null;
+                  currentEntry = null;
+                } else {
+                  //More sub columns for super columns.
+                  if (subcolumnIterator != null && subcolumnIterator.hasNext()) {
+                    next = true;
+                  }
                 }
-                else {
-                  hasEmptyRow = true;
-                }
+              } else {
+                next = true;
               }
 
-              if (!hasEmptyRow) {
+              if (next) {
+                rowKey.set(ByteBufferUtil.getArray(recordReader.getCurrentKey()));
+                MapWritable theMap = new MapWritable();
+                Map.Entry<ByteBuffer, IColumn> entry = currentEntry;
+                boolean hasEmptyRow = false;
+
+                if (subcolumnIterator == null || !subcolumnIterator.hasNext()) {
+                  // DSP-465: detect range ghosts and skip this
+                  if (currentRecordIterator.hasNext()) {
+                    entry = currentRecordIterator.next();
+                    currentEntry = entry;
+                    subcolumnIterator = null;
+                  }
+                  else {
+                    continue;
+                  }
+                }
+
                 //is this a super column
                 boolean superColumn = entry.getValue() instanceof SuperColumn;
 
@@ -210,7 +212,7 @@ public class HiveCassandraStandardColumnInputFormat extends
                   // Subcolumn name
                   hic = new HiveIColumn();
                   hic.setName(StandardColumnSerDe.CASSANDRA_SUBCOLUMN_COLUMN.getBytes());
-                  hic.setValue(ByteBufferUtil.getArray(subCol.name()));
+                  hic.setValue(ByteBufferUtil.getArray(subCol.namef()));
                   hic.setTimestamp(subCol.timestamp());
 
                   theMap.put(new BytesWritable(StandardColumnSerDe.CASSANDRA_SUBCOLUMN_COLUMN
@@ -225,7 +227,8 @@ public class HiveCassandraStandardColumnInputFormat extends
                   theMap.put(
                       new BytesWritable(StandardColumnSerDe.CASSANDRA_VALUE_COLUMN.getBytes()), hic);
 
-                } else {
+                }
+                else {
 
                   // Value
                   hic = new HiveIColumn();
@@ -237,14 +240,14 @@ public class HiveCassandraStandardColumnInputFormat extends
                       new BytesWritable(StandardColumnSerDe.CASSANDRA_VALUE_COLUMN.getBytes()), hic);
 
                 }
+
+                // Done
+                value.setKey(rowKey);
+                value.setValue(theMap);
               }
 
-              // Done
-              value.setKey(rowKey);
-              value.setValue(theMap);
+              break;
             }
-
-
           } else {
 
             next = recordReader.nextKeyValue();
