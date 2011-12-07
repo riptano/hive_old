@@ -212,7 +212,7 @@ public class HiveCassandraStandardColumnInputFormat extends
                   // Subcolumn name
                   hic = new HiveIColumn();
                   hic.setName(StandardColumnSerDe.CASSANDRA_SUBCOLUMN_COLUMN.getBytes());
-                  hic.setValue(ByteBufferUtil.getArray(subCol.namef()));
+                  hic.setValue(ByteBufferUtil.getArray(subCol.name()));
                   hic.setTimestamp(subCol.timestamp());
 
                   theMap.put(new BytesWritable(StandardColumnSerDe.CASSANDRA_SUBCOLUMN_COLUMN
