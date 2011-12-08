@@ -13,8 +13,19 @@ import junit.framework.Test;
 import org.apache.cassandra.contrib.utils.service.CassandraServiceDataCleaner;
 import org.apache.cassandra.db.marshal.LexicalUUIDType;
 import org.apache.cassandra.hadoop.ColumnFamilyInputFormat;
-import org.apache.cassandra.service.EmbeddedCassandraService;
-import org.apache.cassandra.thrift.*;
+import org.apache.cassandra.thrift.CassandraDaemon;
+import org.apache.cassandra.thrift.Cassandra;
+import org.apache.cassandra.thrift.CfDef;
+import org.apache.cassandra.thrift.Column;
+import org.apache.cassandra.thrift.ColumnDef;
+import org.apache.cassandra.thrift.ColumnOrSuperColumn;
+import org.apache.cassandra.thrift.ColumnPath;
+import org.apache.cassandra.thrift.ConsistencyLevel;
+import org.apache.cassandra.thrift.CounterColumn;
+import org.apache.cassandra.thrift.IndexType;
+import org.apache.cassandra.thrift.KsDef;
+import org.apache.cassandra.thrift.Mutation;
+import org.apache.cassandra.thrift.SuperColumn;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -25,7 +36,7 @@ import org.apache.hadoop.mapred.JobConf;
 public class CassandraTestSetup extends TestSetup {
 
   static final Log LOG = LogFactory.getLog(CassandraTestSetup.class);
-  private EmbeddedCassandraService cassandra;
+  private CassandraDaemon cassandra;
 
   private final String KS = "ks_demo";
   private final String CF = "cf_demo";
@@ -56,7 +67,8 @@ public class CassandraTestSetup extends TestSetup {
     if (cassandra == null) {
       CassandraServiceDataCleaner cleaner = new CassandraServiceDataCleaner();
       cleaner.prepare();
-      cassandra = new EmbeddedCassandraService();
+      cassandra = new CassandraDaemon();
+      cassandra.init(null);
       cassandra.start();
 
       // Make sure that this server is connectable.
@@ -330,9 +342,15 @@ public class CassandraTestSetup extends TestSetup {
 
   @Override
   protected void tearDown() throws Exception {
-    // do we need this?
-    CassandraServiceDataCleaner cleaner = new CassandraServiceDataCleaner();
-    cleaner.prepare();
+
+    if (cassandra != null)
+    {
+      cassandra.stop(null);
+      cassandra = null;
+
+      CassandraServiceDataCleaner cleaner = new CassandraServiceDataCleaner();
+      cleaner.prepare();
+    }
   }
 
 }
