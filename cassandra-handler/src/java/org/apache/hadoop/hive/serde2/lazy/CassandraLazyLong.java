@@ -2,8 +2,6 @@ package org.apache.hadoop.hive.serde2.lazy;
 
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hive.serde2.lazy.ByteArrayRef;
-import org.apache.hadoop.hive.serde2.lazy.LazyLong;
 import org.apache.hadoop.hive.serde2.lazy.objectinspector.primitive.LazyLongObjectInspector;
 import org.apache.hadoop.io.LongWritable;
 
@@ -11,34 +9,29 @@ import org.apache.hadoop.io.LongWritable;
  * CassandraLazyLong parses the object into LongWritable value.
  *
  */
-public class CassandraLazyLong extends
-    CassandraLazyPrimitive<LazyLongObjectInspector, LongWritable> {
-
+public class CassandraLazyLong extends LazyLong
+{
   public CassandraLazyLong(LazyLongObjectInspector oi) {
     super(oi);
     data = new LongWritable();
   }
 
   @Override
-  public void parseBytes(ByteArrayRef bytes, int start, int length) {
-    setData(LazyLong.parseLong(bytes.getData(), start, length));
-  }
+  public void init(ByteArrayRef bytes, int start, int length) {
 
-  @Override
-  public void parsePrimitiveBytes(ByteArrayRef bytes, int start, int length) {
+    if ( length == 8 ) {
+      try {
+        ByteBuffer buf = ByteBuffer.wrap(bytes.getData(), start, length);
+        data.set(buf.getLong(buf.position()));
+        isNull = false;
+        return;
+      } catch (IndexOutOfBoundsException ie) {
+        isNull = true;
+        //we are unable to parse the data, try to parse it in the hive lazy way.
+      }
+    }
 
-    ByteBuffer buf = ByteBuffer.wrap(bytes.getData(), start, length);
-    setData(buf.getLong(buf.position()));
-  }
-
-  @Override
-  public void setPrimitiveSize() {
-    primitiveSize = 8;
-  }
-
-  private void setData(long num) {
-    data.set(num);
-    isNull = false;
+    super.init(bytes, start, length);
   }
 
 }

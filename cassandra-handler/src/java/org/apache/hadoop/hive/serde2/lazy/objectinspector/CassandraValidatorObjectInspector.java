@@ -10,13 +10,6 @@ import org.apache.hadoop.io.Text;
 public class CassandraValidatorObjectInspector
   extends AbstractPrimitiveLazyObjectInspector<Text> implements StringObjectInspector {
 
-  /**
-   * The primitive types supported by Hive.
-   */
-  public static enum CassandraValidatorCategory {
-    UUID, ASCII, BYTES, INTEGER, LONG, UTF8, COUNTER, UNKNOWN
-  }
-
   private final AbstractType validator;
 
   CassandraValidatorObjectInspector(AbstractType type) {

@@ -3,12 +3,11 @@ package org.apache.hadoop.hive.serde2.lazy;
 import java.nio.ByteBuffer;
 
 import org.apache.cassandra.db.marshal.AbstractType;
-import org.apache.hadoop.hive.serde2.lazy.ByteArrayRef;
 import org.apache.hadoop.hive.serde2.lazy.objectinspector.CassandraValidatorObjectInspector;
 import org.apache.hadoop.io.Text;
 
 public class CassandraLazyValidator  extends
-    CassandraLazyPrimitive<CassandraValidatorObjectInspector, Text> {
+    LazyPrimitive<CassandraValidatorObjectInspector, Text> {
   private final AbstractType validator;
 
   public CassandraLazyValidator(CassandraValidatorObjectInspector oi) {
@@ -24,29 +23,21 @@ public class CassandraLazyValidator  extends
   }
 
   @Override
-  public void parseBytes(ByteArrayRef bytes, int start, int length) {
+  public void init(ByteArrayRef bytes, int start, int length) {
+
+    if ( length == 8 ) {
+      try {
+        ByteBuffer buf = ByteBuffer.wrap(bytes.getData(), start, length);
+        data.set(validator.getString(buf));
+        isNull = false;
+        return;
+      } catch (IndexOutOfBoundsException ie) {
+        //we are unable to parse the data, try to parse it in the hive lazy way.
+      }
+    }
+
     data.set(bytes.getData(), start, length);
-  }
-
-  @Override
-  public void parsePrimitiveBytes(ByteArrayRef bytes, int start, int length) {
-    ByteBuffer buf = ByteBuffer.wrap(bytes.getData(), start, length);
-    setData(validator.getString(buf));
-  }
-
-  @Override
-  public void setPrimitiveSize() {
-    primitiveSize = 8;
-  }
-
-  private void setData(String str) {
-    data.set(str);
-    isNull = false;
-  }
-
-  @Override
-  public boolean checkSize(int length) {
-    return true;
+    isNull = true;
   }
 
 }
