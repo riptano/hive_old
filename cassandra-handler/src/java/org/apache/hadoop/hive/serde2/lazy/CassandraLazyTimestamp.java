@@ -1,28 +1,27 @@
 package org.apache.hadoop.hive.serde2.lazy;
 
 import java.nio.ByteBuffer;
+import java.sql.Timestamp;
 
-import org.apache.hadoop.hive.serde2.lazy.objectinspector.primitive.LazyLongObjectInspector;
+import org.apache.hadoop.hive.serde2.lazy.objectinspector.primitive.LazyTimestampObjectInspector;
 
 /**
- * CassandraLazyLong parses the object into LongWritable value.
+ * CassandraLazyLong parses the object into TimestampWritable value.
  *
  */
-public class CassandraLazyLong extends LazyLong
+public class CassandraLazyTimestamp extends LazyTimestamp
 {
-  public CassandraLazyLong(LazyLongObjectInspector oi) {
+  public CassandraLazyTimestamp(LazyTimestampObjectInspector oi) {
     super(oi);
   }
 
   @Override
   public void init(ByteArrayRef bytes, int start, int length) {
 
-    System.err.println("LENGTH "+length);
-
     if ( length == 8 ) {
       try {
         ByteBuffer buf = ByteBuffer.wrap(bytes.getData(), start, length);
-        data.set(buf.getLong(buf.position()));
+        data.set(new Timestamp(buf.getLong(buf.position())));
         isNull = false;
         return;
       } catch (Throwable ie) {

@@ -7,14 +7,19 @@ import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectIn
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.StringObjectInspector;
 import org.apache.hadoop.io.Text;
 
+/**
+ * Forces everything to strings using the cassandra validator
+ * CassandraValidatorObjectInspector.
+ *
+ */
 public class CassandraValidatorObjectInspector
   extends AbstractPrimitiveLazyObjectInspector<Text> implements StringObjectInspector {
 
   private final AbstractType validator;
 
-  CassandraValidatorObjectInspector(AbstractType type) {
+  public CassandraValidatorObjectInspector(AbstractType validator) {
     super(PrimitiveObjectInspectorUtils.stringTypeEntry);
-    validator = type;
+    this.validator = validator;
   }
 
   @Override

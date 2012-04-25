@@ -2,27 +2,26 @@ package org.apache.hadoop.hive.serde2.lazy;
 
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hive.serde2.lazy.objectinspector.primitive.LazyLongObjectInspector;
+import org.apache.cassandra.db.marshal.FloatType;
+import org.apache.hadoop.hive.serde2.lazy.objectinspector.primitive.LazyFloatObjectInspector;
 
 /**
- * CassandraLazyLong parses the object into LongWritable value.
+ * CassandraLazyLong parses the object into FloatWritable value.
  *
  */
-public class CassandraLazyLong extends LazyLong
+public class CassandraLazyFloat extends LazyFloat
 {
-  public CassandraLazyLong(LazyLongObjectInspector oi) {
+  public CassandraLazyFloat(LazyFloatObjectInspector oi) {
     super(oi);
   }
 
   @Override
   public void init(ByteArrayRef bytes, int start, int length) {
 
-    System.err.println("LENGTH "+length);
-
-    if ( length == 8 ) {
+    if ( length == 4 ) {
       try {
         ByteBuffer buf = ByteBuffer.wrap(bytes.getData(), start, length);
-        data.set(buf.getLong(buf.position()));
+        data.set(FloatType.instance.compose(buf));
         isNull = false;
         return;
       } catch (Throwable ie) {
