@@ -17,8 +17,6 @@ public class CassandraLazyLong extends LazyLong
   @Override
   public void init(ByteArrayRef bytes, int start, int length) {
 
-    System.err.println("LENGTH "+length);
-
     if ( length == 8 ) {
       try {
         ByteBuffer buf = ByteBuffer.wrap(bytes.getData(), start, length);
