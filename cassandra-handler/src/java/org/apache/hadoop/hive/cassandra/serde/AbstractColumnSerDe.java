@@ -34,6 +34,12 @@ public abstract class AbstractColumnSerDe implements SerDe {
 
   public static final String CASSANDRA_CF_NAME = "cassandra.cf.name"; // column family
   public static final String CASSANDRA_RANGE_BATCH_SIZE = "cassandra.range.size";
+  public static final String CASSANDRA_SLICE_PREDICATE_COLUMN_NAMES = "cassandra.slice.predicate.column_names";
+  public static final String CASSANDRA_SLICE_PREDICATE_RANGE_START = "cassandra.slice.predicate.range.start";
+  public static final String CASSANDRA_SLICE_PREDICATE_RANGE_FINISH = "cassandra.slice.predicate.range.finish";
+  public static final String CASSANDRA_SLICE_PREDICATE_RANGE_COMPARATOR = "cassandra.slice.predicate.range.comparator";
+  public static final String CASSANDRA_SLICE_PREDICATE_RANGE_REVERSED = "cassandra.slice.predicate.range.reversed";
+  public static final String CASSANDRA_SLICE_PREDICATE_RANGE_COUNT = "cassandra.slice.predicate.range.count";
   public static final String CASSANDRA_SLICE_PREDICATE_SIZE = "cassandra.slice.predicate.size";
   public static final String CASSANDRA_SPLIT_SIZE = "cassandra.input.split.size";
   public static final String CASSANDRA_HOST = "cassandra.host"; // initialHost
