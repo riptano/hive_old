@@ -12,7 +12,6 @@ public class CassandraLazyBinary extends LazyBinary {
 
   public CassandraLazyBinary(LazyBinaryObjectInspector oi) {
     super(oi);
-    data = new BytesWritable();
   }
 
   public CassandraLazyBinary(LazyBinary other){

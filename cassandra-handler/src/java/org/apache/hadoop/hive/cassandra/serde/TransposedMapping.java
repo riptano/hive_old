@@ -55,6 +55,7 @@ public class TransposedMapping extends TableMapping {
       CassandraSuperPut put = new CassandraSuperPut(ByteBuffer.wrap(keyBytes));
       byte[] colName = serializeToBytes(
           fields.get(columnName).getFieldObjectInspector(),
+          declaredFields.get(columnName).getFieldObjectInspector(),
           list.get(columnName),
           useJsonSerialize(columnName, declaredFields));
       CassandraPut column = new CassandraPut(ByteBuffer.wrap(colName));

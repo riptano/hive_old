@@ -5,18 +5,18 @@ import java.util.List;
 
 import org.apache.cassandra.db.marshal.AbstractType;
 import org.apache.hadoop.hive.serde2.lazy.CassandraLazyBinary;
+import org.apache.hadoop.hive.serde2.lazy.CassandraLazyBoolean;
+import org.apache.hadoop.hive.serde2.lazy.CassandraLazyDouble;
+import org.apache.hadoop.hive.serde2.lazy.CassandraLazyFloat;
 import org.apache.hadoop.hive.serde2.lazy.CassandraLazyInteger;
 import org.apache.hadoop.hive.serde2.lazy.CassandraLazyLong;
+import org.apache.hadoop.hive.serde2.lazy.CassandraLazyTimestamp;
 import org.apache.hadoop.hive.serde2.lazy.CassandraLazyValidator;
-import org.apache.hadoop.hive.serde2.lazy.LazyBoolean;
 import org.apache.hadoop.hive.serde2.lazy.LazyByte;
-import org.apache.hadoop.hive.serde2.lazy.LazyDouble;
 import org.apache.hadoop.hive.serde2.lazy.LazyFactory;
-import org.apache.hadoop.hive.serde2.lazy.LazyFloat;
 import org.apache.hadoop.hive.serde2.lazy.LazyObject;
 import org.apache.hadoop.hive.serde2.lazy.LazyShort;
 import org.apache.hadoop.hive.serde2.lazy.LazyString;
-import org.apache.hadoop.hive.serde2.lazy.objectinspector.CassandraLazyObjectInspectorFactory;
 import org.apache.hadoop.hive.serde2.lazy.objectinspector.CassandraValidatorObjectInspector;
 import org.apache.hadoop.hive.serde2.lazy.objectinspector.LazyObjectInspectorFactory;
 import org.apache.hadoop.hive.serde2.lazy.objectinspector.primitive.LazyBinaryObjectInspector;
@@ -28,6 +28,7 @@ import org.apache.hadoop.hive.serde2.lazy.objectinspector.primitive.LazyIntObjec
 import org.apache.hadoop.hive.serde2.lazy.objectinspector.primitive.LazyLongObjectInspector;
 import org.apache.hadoop.hive.serde2.lazy.objectinspector.primitive.LazyShortObjectInspector;
 import org.apache.hadoop.hive.serde2.lazy.objectinspector.primitive.LazyStringObjectInspector;
+import org.apache.hadoop.hive.serde2.lazy.objectinspector.primitive.LazyTimestampObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector.PrimitiveCategory;
@@ -48,10 +49,10 @@ public class CassandraLazyFactory {
   public static LazyObject createLazyPrimitiveClass(
       PrimitiveObjectInspector oi) {
     PrimitiveCategory p = oi.getPrimitiveCategory();
-    //TODO: We might need to handle FLOAT and DOUBLE differently as well.
+
     switch (p) {
       case BOOLEAN:
-        return new LazyBoolean((LazyBooleanObjectInspector) oi);
+        return new CassandraLazyBoolean((LazyBooleanObjectInspector) oi);
       case BYTE:
         return new LazyByte((LazyByteObjectInspector) oi);
       case SHORT:
@@ -61,13 +62,15 @@ public class CassandraLazyFactory {
       case LONG:
         return new CassandraLazyLong((LazyLongObjectInspector) oi);
       case FLOAT:
-        return new LazyFloat((LazyFloatObjectInspector) oi);
+        return new CassandraLazyFloat((LazyFloatObjectInspector) oi);
       case DOUBLE:
-        return new LazyDouble((LazyDoubleObjectInspector) oi);
+        return new CassandraLazyDouble((LazyDoubleObjectInspector) oi);
       case STRING:
         return new LazyString((LazyStringObjectInspector) oi);
       case BINARY:
         return new CassandraLazyBinary((LazyBinaryObjectInspector) oi);
+      case TIMESTAMP:
+        return new CassandraLazyTimestamp((LazyTimestampObjectInspector) oi);
       default:
         throw new RuntimeException("Internal error: no LazyObject for " + p);
     }
@@ -98,6 +101,7 @@ public class CassandraLazyFactory {
   /**
    * Create a hierarchical ObjectInspector for LazyObject with the given
    * typeInfo.
+   * @param typeInfo
    *
    * @param typeInfo
    *          The type information for the LazyObject
@@ -111,10 +115,11 @@ public class CassandraLazyFactory {
    *          The sequence of bytes representing NULL.
    * @return The ObjectInspector
    */
-  public static ObjectInspector createLazyObjectInspector(AbstractType validator,
+  public static ObjectInspector createLazyObjectInspector(TypeInfo typeInfo, AbstractType validator,
       byte[] separator, int separatorIndex, Text nullSequence, boolean escaped,
       byte escapeChar) {
-    return CassandraLazyObjectInspectorFactory.getLazyObjectInspector(validator);
+
+      return new CassandraValidatorObjectInspector(validator);
   }
 
   /**
@@ -131,6 +136,7 @@ public class CassandraLazyFactory {
       List<String> columnNames, List<TypeInfo> typeInfos, List<AbstractType> validatorTypes, byte[] separators,
       Text nullSequence, boolean lastColumnTakesRest, boolean escaped,
       byte escapeChar) {
+
     if (validatorTypes.size() == 0) {
       return LazyFactory.createLazyStructInspector(columnNames,
           typeInfos,
@@ -144,10 +150,12 @@ public class CassandraLazyFactory {
 
     ArrayList<ObjectInspector> columnObjectInspectors = new ArrayList<ObjectInspector>(
         validatorTypes.size());
+
     for (int i = 0; i < validatorTypes.size(); i++) {
       columnObjectInspectors.add(createLazyObjectInspector(
-          validatorTypes.get(i), separators, 1, nullSequence, escaped, escapeChar));
+      typeInfos.get(i),validatorTypes.get(i), separators, 1, nullSequence, escaped, escapeChar));
     }
+
     return LazyObjectInspectorFactory.getLazySimpleStructObjectInspector(
         columnNames, columnObjectInspectors, separators[0], nullSequence,
         lastColumnTakesRest, escaped, escapeChar);
