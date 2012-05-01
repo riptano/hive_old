@@ -6,7 +6,7 @@ import java.sql.Timestamp;
 import org.apache.hadoop.hive.serde2.lazy.objectinspector.primitive.LazyTimestampObjectInspector;
 
 /**
- * CassandraLazyLong parses the object into TimestampWritable value.
+ * CassandraLazyTimestamp parses the object into TimestampWritable value.
  *
  */
 public class CassandraLazyTimestamp extends LazyTimestamp
@@ -31,6 +31,5 @@ public class CassandraLazyTimestamp extends LazyTimestamp
 
     super.init(bytes, start, length);
   }
-
 }
 

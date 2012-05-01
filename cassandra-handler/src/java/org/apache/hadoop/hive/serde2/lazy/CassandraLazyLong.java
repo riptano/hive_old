@@ -30,6 +30,5 @@ public class CassandraLazyLong extends LazyLong
 
     super.init(bytes, start, length);
   }
-
 }
 

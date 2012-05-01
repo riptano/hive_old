@@ -5,7 +5,7 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.hive.serde2.lazy.objectinspector.primitive.LazyDoubleObjectInspector;
 
 /**
- * CassandraLazyLong parses the object into DoubleWritable value.
+ * CassandraLazyDouble parses the object into DoubleWritable value.
  *
  */
 public class CassandraLazyDouble extends LazyDouble
@@ -30,6 +30,5 @@ public class CassandraLazyDouble extends LazyDouble
 
     super.init(bytes, start, length);
   }
-
 }
 

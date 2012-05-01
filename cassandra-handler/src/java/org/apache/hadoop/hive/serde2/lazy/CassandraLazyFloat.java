@@ -6,7 +6,7 @@ import org.apache.cassandra.db.marshal.FloatType;
 import org.apache.hadoop.hive.serde2.lazy.objectinspector.primitive.LazyFloatObjectInspector;
 
 /**
- * CassandraLazyLong parses the object into FloatWritable value.
+ * CassandraLazyFloat parses the object into FloatWritable value.
  *
  */
 public class CassandraLazyFloat extends LazyFloat
@@ -31,6 +31,5 @@ public class CassandraLazyFloat extends LazyFloat
 
     super.init(bytes, start, length);
   }
-
 }
 
