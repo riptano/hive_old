@@ -57,59 +57,135 @@ public class CassandraStorageHandler
       columnInfo = AbstractColumnSerDe.createColumnMappingString(
         tableProperties.getProperty(org.apache.hadoop.hive.serde.Constants.LIST_COLUMNS));
     }
-
     jobProperties.put(AbstractColumnSerDe.CASSANDRA_COL_MAPPING, columnInfo);
 
-    jobProperties.put(AbstractColumnSerDe.CASSANDRA_HOST,
-      tableProperties.getProperty(AbstractColumnSerDe.CASSANDRA_HOST, AbstractColumnSerDe.DEFAULT_CASSANDRA_HOST));
+    if (configuration.get(AbstractColumnSerDe.CASSANDRA_HOST) == null)
+    {
+      jobProperties.put(AbstractColumnSerDe.CASSANDRA_HOST,
+          tableProperties.getProperty(AbstractColumnSerDe.CASSANDRA_HOST, AbstractColumnSerDe.DEFAULT_CASSANDRA_HOST));
+    }
+    else
+    {
+      jobProperties.put(AbstractColumnSerDe.CASSANDRA_HOST, configuration.get(AbstractColumnSerDe.CASSANDRA_HOST));
+    }
 
-    jobProperties.put(AbstractColumnSerDe.CASSANDRA_PORT,
-      tableProperties.getProperty(AbstractColumnSerDe.CASSANDRA_PORT, AbstractColumnSerDe.DEFAULT_CASSANDRA_PORT));
+    if (configuration.get(AbstractColumnSerDe.CASSANDRA_PORT) == null)
+    {
+      jobProperties.put(AbstractColumnSerDe.CASSANDRA_PORT,
+          tableProperties.getProperty(AbstractColumnSerDe.CASSANDRA_PORT, AbstractColumnSerDe.DEFAULT_CASSANDRA_PORT));
+    }
+    else
+    {
+      jobProperties.put(AbstractColumnSerDe.CASSANDRA_PORT,configuration.get(AbstractColumnSerDe.CASSANDRA_PORT));
+    }
 
-    jobProperties.put(AbstractColumnSerDe.CASSANDRA_PARTITIONER,
-      tableProperties.getProperty(AbstractColumnSerDe.CASSANDRA_PARTITIONER,
-        "org.apache.cassandra.dht.RandomPartitioner"));
+    if (configuration.get(AbstractColumnSerDe.CASSANDRA_PARTITIONER) == null)
+    {
+      jobProperties.put(AbstractColumnSerDe.CASSANDRA_PARTITIONER,
+          tableProperties.getProperty(AbstractColumnSerDe.CASSANDRA_PARTITIONER,
+          "org.apache.cassandra.dht.RandomPartitioner"));
+    }
+    else
+    {
+      jobProperties.put(AbstractColumnSerDe.CASSANDRA_PARTITIONER,configuration.get(AbstractColumnSerDe.CASSANDRA_PARTITIONER));
+    }
 
-    jobProperties.put(AbstractColumnSerDe.CASSANDRA_THRIFT_MODE,
-      tableProperties.getProperty(AbstractColumnSerDe.CASSANDRA_THRIFT_MODE, "framed"));
+    if (configuration.get(AbstractColumnSerDe.CASSANDRA_CONSISTENCY_LEVEL) == null)
+    {
+      jobProperties.put(AbstractColumnSerDe.CASSANDRA_CONSISTENCY_LEVEL,
+          tableProperties.getProperty(AbstractColumnSerDe.CASSANDRA_CONSISTENCY_LEVEL,
+              AbstractColumnSerDe.DEFAULT_CONSISTENCY_LEVEL));
+    }
+    else
+    {
+      jobProperties.put(AbstractColumnSerDe.CASSANDRA_CONSISTENCY_LEVEL,configuration.get(AbstractColumnSerDe.CASSANDRA_CONSISTENCY_LEVEL));
+    }
 
-    jobProperties.put(AbstractColumnSerDe.CASSANDRA_CONSISTENCY_LEVEL,
-      tableProperties.getProperty(AbstractColumnSerDe.CASSANDRA_CONSISTENCY_LEVEL,
-          AbstractColumnSerDe.DEFAULT_CONSISTENCY_LEVEL));
+    if (configuration.get(AbstractColumnSerDe.CASSANDRA_RANGE_BATCH_SIZE) == null)
+    {
+      jobProperties.put(AbstractColumnSerDe.CASSANDRA_RANGE_BATCH_SIZE,
+          tableProperties.getProperty(AbstractColumnSerDe.CASSANDRA_RANGE_BATCH_SIZE,
+              Integer.toString(AbstractColumnSerDe.DEFAULT_RANGE_BATCH_SIZE)));
+    }
+    else
+    {
+      jobProperties.put(AbstractColumnSerDe.CASSANDRA_RANGE_BATCH_SIZE, configuration.get(AbstractColumnSerDe.CASSANDRA_RANGE_BATCH_SIZE));
+    }
 
-    jobProperties.put(AbstractColumnSerDe.CASSANDRA_RANGE_BATCH_SIZE,
-      tableProperties.getProperty(AbstractColumnSerDe.CASSANDRA_RANGE_BATCH_SIZE,
-        Integer.toString(AbstractColumnSerDe.DEFAULT_RANGE_BATCH_SIZE)));
+    if (configuration.get(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_SIZE) == null)
+    {
+      jobProperties.put(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_SIZE,
+          tableProperties.getProperty(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_SIZE,
+              Integer.toString(AbstractColumnSerDe.DEFAULT_SLICE_PREDICATE_SIZE)));
+    }
+    else
+    {
+      jobProperties.put(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_SIZE, configuration.get(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_SIZE));
+    }
 
-    jobProperties.put(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_SIZE,
-      tableProperties.getProperty(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_SIZE,
-        Integer.toString(AbstractColumnSerDe.DEFAULT_SLICE_PREDICATE_SIZE)));
+    if (configuration.get(AbstractColumnSerDe.CASSANDRA_SPLIT_SIZE) == null)
+    {
+      jobProperties.put(AbstractColumnSerDe.CASSANDRA_SPLIT_SIZE,
+          tableProperties.getProperty(AbstractColumnSerDe.CASSANDRA_SPLIT_SIZE,
+              Integer.toString(AbstractColumnSerDe.DEFAULT_SPLIT_SIZE)));
+    }
+    else
+    {
+      jobProperties.put(AbstractColumnSerDe.CASSANDRA_SPLIT_SIZE, configuration.get(AbstractColumnSerDe.CASSANDRA_SPLIT_SIZE));
+    }
 
-    jobProperties.put(AbstractColumnSerDe.CASSANDRA_SPLIT_SIZE,
-      tableProperties.getProperty(AbstractColumnSerDe.CASSANDRA_SPLIT_SIZE,
-          Integer.toString(AbstractColumnSerDe.DEFAULT_SPLIT_SIZE)));
+    if (configuration.get(AbstractColumnSerDe.CASSANDRA_BATCH_MUTATION_SIZE) == null)
+    {
+      jobProperties.put(AbstractColumnSerDe.CASSANDRA_BATCH_MUTATION_SIZE,
+          tableProperties.getProperty(AbstractColumnSerDe.CASSANDRA_BATCH_MUTATION_SIZE,
+              Integer.toString(AbstractColumnSerDe.DEFAULT_BATCH_MUTATION_SIZE)));
+    }
+    else
+    {
+      jobProperties.put(AbstractColumnSerDe.CASSANDRA_BATCH_MUTATION_SIZE, configuration.get(AbstractColumnSerDe.CASSANDRA_BATCH_MUTATION_SIZE));
+    }
 
-    jobProperties.put(AbstractColumnSerDe.CASSANDRA_BATCH_MUTATION_SIZE,
-        tableProperties.getProperty(AbstractColumnSerDe.CASSANDRA_BATCH_MUTATION_SIZE,
-            Integer.toString(AbstractColumnSerDe.DEFAULT_BATCH_MUTATION_SIZE)));
+    if (configuration.get(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_START) == null)
+    {
+      jobProperties.put(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_START,
+          tableProperties.getProperty(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_START, ""));
+    }
+    else
+    {
+      jobProperties.put(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_START, configuration.get(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_START));
+    }
 
-    jobProperties.put(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_FINISH,
-        tableProperties.getProperty(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_FINISH, ""));
+    if (configuration.get(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_FINISH) == null)
+    {
+      jobProperties.put(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_FINISH,
+          tableProperties.getProperty(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_FINISH, ""));
+    }
+    else
+    {
+      jobProperties.put(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_FINISH, configuration.get(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_FINISH));
+    }
 
-    jobProperties.put(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_COMPARATOR,
-        tableProperties.getProperty(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_COMPARATOR, ""));
+    if (configuration.get(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_COMPARATOR) == null)
+    {
+      jobProperties.put(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_COMPARATOR,
+          tableProperties.getProperty(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_COMPARATOR, ""));
+    }
+    else
+    {
+      jobProperties.put(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_COMPARATOR,
+          configuration.get(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_COMPARATOR));
+    }
 
-    jobProperties.put(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_REVERSED,
-        tableProperties.getProperty(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_REVERSED, "false"));
-
-    jobProperties.put(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_COUNT,
-        tableProperties.getProperty(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_COUNT, "false"));
-
-    jobProperties.put(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_COLUMN_NAMES,
-        tableProperties.getProperty(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_COLUMN_NAMES, ""));
-
-    jobProperties.put(AbstractColumnSerDe.CASSANDRA_CF_COUNTERS,
-            tableProperties.getProperty(AbstractColumnSerDe.CASSANDRA_CF_COUNTERS, "false"));
+    if (configuration.get(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_REVERSED) == null)
+    {
+      jobProperties.put(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_REVERSED,
+          tableProperties.getProperty(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_REVERSED, "false"));
+    }
+    else
+    {
+      jobProperties.put(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_REVERSED,
+          configuration.get(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_REVERSED));
+    }
   }
 
   @Override
