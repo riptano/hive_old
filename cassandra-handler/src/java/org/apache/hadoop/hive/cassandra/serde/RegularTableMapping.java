@@ -38,6 +38,8 @@ public class RegularTableMapping extends TableMapping {
 
       // Get the field objectInspector and the field object.
       ObjectInspector foi = fields.get(i).getFieldObjectInspector();
+      ObjectInspector doi = declaredFields.get(i).getFieldObjectInspector();
+
 
       Object f = null;
       if (list == null) {
@@ -61,7 +63,7 @@ public class RegularTableMapping extends TableMapping {
           for (Map.Entry<?, ?> entry : map.entrySet()) {
             // Get the Key
             serializeStream.reset();
-            serialize(entry.getKey(), koi, 3);
+            serialize(entry.getKey(), koi,koi, 3);
 
             // Get the column-qualifier
             byte[] columnQualifier = new byte[serializeStream.getCount()];
@@ -71,7 +73,7 @@ public class RegularTableMapping extends TableMapping {
             // Get the Value
             serializeStream.reset();
 
-            boolean isNotNull = serialize(entry.getValue(), voi, 3);
+            boolean isNotNull = serialize(entry.getValue(), voi,voi, 3);
             if (!isNotNull) {
               continue;
             }
@@ -92,7 +94,7 @@ public class RegularTableMapping extends TableMapping {
         cc.setTimeStamp(System.currentTimeMillis());
         cc.setColumnFamily(cassandraColumnFamily);
         cc.setColumn(cassandraColumn.getBytes());
-        byte[] key = serializeToBytes(foi, f, useJsonSerialize(i, declaredFields));
+        byte[] key = serializeToBytes(foi, doi, f, useJsonSerialize(i, declaredFields));
         cc.setValue(key);
         put.getColumns().add(cc);
       }

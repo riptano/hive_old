@@ -21,6 +21,7 @@ import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
 import org.apache.hadoop.io.BytesWritable;
 
 public class CassandraColumnSerDe extends AbstractColumnSerDe {
+
   public static final String CASSANDRA_VALIDATOR_TYPE = "cassandra.cf.validatorType"; // validator type
 
   public static final AbstractType DEFAULT_VALIDATOR_TYPE = BytesType.instance;

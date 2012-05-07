@@ -2,15 +2,15 @@ package org.apache.hadoop.hive.serde2.lazy;
 
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hive.serde2.lazy.objectinspector.primitive.LazyLongObjectInspector;
+import org.apache.hadoop.hive.serde2.lazy.objectinspector.primitive.LazyDoubleObjectInspector;
 
 /**
- * CassandraLazyLong parses the object into LongWritable value.
+ * CassandraLazyDouble parses the object into DoubleWritable value.
  *
  */
-public class CassandraLazyLong extends LazyLong
+public class CassandraLazyDouble extends LazyDouble
 {
-  public CassandraLazyLong(LazyLongObjectInspector oi) {
+  public CassandraLazyDouble(LazyDoubleObjectInspector oi) {
     super(oi);
   }
 
@@ -20,7 +20,7 @@ public class CassandraLazyLong extends LazyLong
     if ( length == 8 ) {
       try {
         ByteBuffer buf = ByteBuffer.wrap(bytes.getData(), start, length);
-        data.set(buf.getLong(buf.position()));
+        data.set(buf.getDouble(buf.position()));
         isNull = false;
         return;
       } catch (Throwable ie) {

@@ -115,7 +115,7 @@ public class CassandraHiveRecordReader extends RecordReader<BytesWritable, MapWr
       // This loop is exited almost every time with the break at the end,
       // see DSP-465 note below
       while (true) {
-        if (columnIterator == null || !columnIterator.hasNext()) {
+        if ((columnIterator == null || !columnIterator.hasNext()) && (subColumnIterator == null || !subColumnIterator.hasNext())) {
           next = cfrr.nextKeyValue();
           if (next) {
             columnIterator = cfrr.getCurrentValue().entrySet().iterator();
@@ -159,7 +159,7 @@ public class CassandraHiveRecordReader extends RecordReader<BytesWritable, MapWr
           // SubColumn?
           if (superColumn) {
             if (subColumnIterator == null) {
-              subColumnIterator = ((SuperColumn) entry.getValue()).getSubColumns().iterator();
+              subColumnIterator = entry.getValue().getSubColumns().iterator();
             }
 
             IColumn subCol = subColumnIterator.next();
@@ -180,13 +180,16 @@ public class CassandraHiveRecordReader extends RecordReader<BytesWritable, MapWr
       }
     } else { //untransposed
         next = cfrr.nextKeyValue();
-      if (next) {
-        currentKey = convertByteBuffer(cfrr.getCurrentKey());
 
-        // rowKey
-        currentValue.put(keyColumn, currentKey);
-        populateMap(cfrr.getCurrentValue(), currentValue);
-      }
+        currentValue.clear();
+
+        if (next) {
+            currentKey = convertByteBuffer(cfrr.getCurrentKey());
+
+            // rowKey
+            currentValue.put(keyColumn, currentKey);
+            populateMap(cfrr.getCurrentValue(), currentValue);
+        }
     }
 
     return next;
