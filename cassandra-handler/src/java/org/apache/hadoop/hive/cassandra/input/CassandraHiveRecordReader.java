@@ -180,13 +180,16 @@ public class CassandraHiveRecordReader extends RecordReader<BytesWritable, MapWr
       }
     } else { //untransposed
         next = cfrr.nextKeyValue();
-      if (next) {
-        currentKey = convertByteBuffer(cfrr.getCurrentKey());
 
-        // rowKey
-        currentValue.put(keyColumn, currentKey);
-        populateMap(cfrr.getCurrentValue(), currentValue);
-      }
+        currentValue.clear();
+
+        if (next) {
+            currentKey = convertByteBuffer(cfrr.getCurrentKey());
+
+            // rowKey
+            currentValue.put(keyColumn, currentKey);
+            populateMap(cfrr.getCurrentValue(), currentValue);
+        }
     }
 
     return next;
