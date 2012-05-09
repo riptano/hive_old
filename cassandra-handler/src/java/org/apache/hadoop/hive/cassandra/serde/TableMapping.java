@@ -1,11 +1,16 @@
 package org.apache.hadoop.hive.cassandra.serde;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.cassandra.db.marshal.AbstractType;
+import org.apache.cassandra.db.marshal.BytesType;
+import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.hadoop.hive.serde2.ByteStream;
 import org.apache.hadoop.hive.serde2.SerDeUtils;
+import org.apache.hadoop.hive.serde2.lazy.LazyCassandraUtils;
 import org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe.SerDeParameters;
 import org.apache.hadoop.hive.serde2.lazy.LazyUtils;
 import org.apache.hadoop.hive.serde2.objectinspector.ListObjectInspector;
@@ -15,7 +20,10 @@ import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector.Category;
 import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.StructField;
 import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.primitive.BinaryObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectInspectorFactory;
+import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectInspectorUtils;
+import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Writable;
 
 public abstract class TableMapping {
@@ -78,6 +86,7 @@ public abstract class TableMapping {
       List<? extends StructField> declaredFields) throws IOException {
     return serializeToBytes(
         fields.get(index).getFieldObjectInspector(),
+        declaredFields.get(index).getFieldObjectInspector(),
         list.get(index),
         useJsonSerialize(index, declaredFields));
   }
@@ -98,20 +107,21 @@ public abstract class TableMapping {
   /**
    * Serialize a object into bytes.
    * @param foi object inspector
+   * @param decalred output object inspector
    * @param obj object to be serialized
    * @param useJsonSerialize true to use json serialization
    * @return object in serialized bytes
    * @throws IOException when error happens
    */
-  protected byte[] serializeToBytes(ObjectInspector foi, Object obj, boolean useJsonSerialize) throws IOException {
+  protected byte[] serializeToBytes(ObjectInspector foi, ObjectInspector doi, Object obj, boolean useJsonSerialize) throws IOException {
     serializeStream.reset();
     boolean isNotNull;
     if (!foi.getCategory().equals(Category.PRIMITIVE)
                 && useJsonSerialize) {
       isNotNull = serialize(SerDeUtils.getJSONString(obj, foi),
-                  PrimitiveObjectInspectorFactory.javaStringObjectInspector, 1);
+                  PrimitiveObjectInspectorFactory.javaStringObjectInspector, doi, 1);
     } else {
-      isNotNull = serialize(obj, foi, 1);
+      isNotNull = serialize(obj, foi, doi, 1);
     }
     if (!isNotNull) {
       return null;
@@ -122,15 +132,37 @@ public abstract class TableMapping {
     return key;
   }
 
-  protected boolean serialize(Object obj, ObjectInspector objInspector, int level)
+  protected boolean serialize(Object obj, ObjectInspector objInspector, ObjectInspector declaredObjInspector, int level)
   throws IOException {
 
     switch (objInspector.getCategory()) {
       case PRIMITIVE: {
-        LazyUtils.writePrimitiveUTF8(
-                serializeStream, obj,
-                (PrimitiveObjectInspector) objInspector,
-                escaped, escapeChar, needsEscape);
+
+        //Marshal to expected cassandra format
+        AbstractType validator = LazyCassandraUtils.getCassandraType((PrimitiveObjectInspector)declaredObjInspector);
+
+        if (validator instanceof BytesType)
+        {
+          BytesWritable bw = ((BinaryObjectInspector) objInspector).getPrimitiveWritableObject(obj);
+          serializeStream.write(bw.getBytes(),0,bw.getLength());
+        }
+        else
+        {
+
+          LazyUtils.writePrimitiveUTF8(
+              serializeStream, obj,
+              (PrimitiveObjectInspector) objInspector,
+              escaped, escapeChar, needsEscape);
+
+          //convert from string to cassandra type
+          if (!declaredObjInspector.getTypeName().equals(PrimitiveObjectInspectorUtils.stringTypeEntry.typeName))
+          {
+            ByteBuffer bb = validator.fromString(serializeStream.toString());
+            serializeStream.reset();
+            serializeStream.write(ByteBufferUtil.getArray(bb));
+          }
+        }
+
         return true;
       }
       case LIST: {
@@ -145,7 +177,7 @@ public abstract class TableMapping {
             if (i > 0) {
               serializeStream.write(separator);
             }
-            serialize(list.get(i), eoi, level + 1);
+            serialize(list.get(i), eoi, PrimitiveObjectInspectorFactory.javaStringObjectInspector, level + 1);
           }
         }
         return true;
@@ -168,9 +200,9 @@ public abstract class TableMapping {
             } else {
               serializeStream.write(separator);
             }
-            serialize(entry.getKey(), koi, level + 2);
+            serialize(entry.getKey(), koi, PrimitiveObjectInspectorFactory.javaStringObjectInspector, level + 2);
             serializeStream.write(keyValueSeparator);
-            serialize(entry.getValue(), voi, level + 2);
+            serialize(entry.getValue(), voi, PrimitiveObjectInspectorFactory.javaStringObjectInspector, level + 2);
           }
         }
         return true;
@@ -187,7 +219,7 @@ public abstract class TableMapping {
             if (i > 0) {
               serializeStream.write(separator);
             }
-            serialize(list.get(i), fields.get(i).getFieldObjectInspector(), level + 1);
+            serialize(list.get(i), fields.get(i).getFieldObjectInspector(), PrimitiveObjectInspectorFactory.javaStringObjectInspector, level + 1);
           }
         }
         return true;
