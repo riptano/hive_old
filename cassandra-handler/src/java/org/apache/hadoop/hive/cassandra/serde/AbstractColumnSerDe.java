@@ -52,6 +52,7 @@ public abstract class AbstractColumnSerDe implements SerDe {
   public static final String CASSANDRA_SLICE_PREDICATE_RANGE_REVERSED = "cassandra.slice.predicate.range.reversed";
   public static final String CASSANDRA_SLICE_PREDICATE_RANGE_COUNT = "cassandra.slice.predicate.range.count";
   public static final String CASSANDRA_ENABLE_WIDEROW_ITERATOR = "cassandra.enable.widerow.iterator";
+  public static final String CASSANDRA_TTL = "cassandra.output.ttl"; //column family ttl
 
   public static final String CASSANDRA_SPECIAL_COLUMN_KEY = "row_key";
   public static final String CASSANDRA_SPECIAL_COLUMN_COL = "column_name";
@@ -73,7 +74,7 @@ public abstract class AbstractColumnSerDe implements SerDe {
   public static final String DEFAULT_CASSANDRA_PORT = "9160";
   public static final String DEFAULT_CONSISTENCY_LEVEL = "ONE";
   public static final int DEFAULT_BATCH_MUTATION_SIZE = 500;
-
+  public static final int DEFAULT_CASSANDRA_TTL = -1;
 
   /* names of columns from SerdeParameters */
   protected List<String> cassandraColumnNames;

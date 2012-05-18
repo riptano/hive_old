@@ -15,6 +15,7 @@ import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.Mutation;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.hadoop.hive.cassandra.CassandraProxyClient;
+import org.apache.hadoop.hive.cassandra.serde.AbstractColumnSerDe;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.JobConf;
 
@@ -100,13 +101,20 @@ public class CassandraPut extends CassandraAbstractPut implements Writable {
     Map<String, List<Mutation>> maps = new HashMap<String, List<Mutation>>();
 
     int count = 0;
+    int ttl = getTtl(jc);
+	
     // TODO check for counter
     for (CassandraColumn col : columns) {
       Column cassCol = new Column();
       cassCol.setValue(col.getValue());
       cassCol.setTimestamp(col.getTimeStamp());
       cassCol.setName(col.getColumn());
-
+	  
+	  if (ttl != AbstractColumnSerDe.DEFAULT_CASSANDRA_TTL)
+	  {
+        cassCol.setTtl(getTtl(jc));
+	  }
+	  
       ColumnOrSuperColumn thisCol = new ColumnOrSuperColumn();
       thisCol.setColumn(cassCol);
 

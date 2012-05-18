@@ -186,6 +186,18 @@ public class CassandraStorageHandler
       jobProperties.put(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_REVERSED,
           configuration.get(AbstractColumnSerDe.CASSANDRA_SLICE_PREDICATE_RANGE_REVERSED));
     }
+	
+	if (configuration.get(AbstractColumnSerDe.CASSANDRA_TTL) == null)
+	{
+		jobProperties.put(AbstractColumnSerDe.CASSANDRA_TTL,
+		  tableProperties.getProperty(AbstractColumnSerDe.CASSANDRA_TTL,
+            Integer.toString(AbstractColumnSerDe.DEFAULT_CASSANDRA_TTL)));
+	}
+	else
+	{
+		jobProperties.put(AbstractColumnSerDe.CASSANDRA_TTL,
+		  configuration.get(AbstractColumnSerDe.CASSANDRA_TTL));
+	}
   }
 
   @Override
