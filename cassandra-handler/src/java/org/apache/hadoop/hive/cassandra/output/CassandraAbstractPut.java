@@ -75,4 +75,16 @@ public abstract class CassandraAbstractPut implements Put {
       throw new IOException(e);
     }
   }
+  
+ /**
+  * Parse batch mutation size from job configuration. If none is defined, return the default value 500.
+  *
+  * @param jc job configuration
+  * @return batch mutation size
+  */
+ protected int getTtl(JobConf jc) {
+   return jc.getInt(
+       AbstractColumnSerDe.CASSANDRA_TTL,
+       AbstractColumnSerDe.DEFAULT_CASSANDRA_TTL);
+ } 
 }
