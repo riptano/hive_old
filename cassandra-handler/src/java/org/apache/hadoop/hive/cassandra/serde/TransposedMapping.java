@@ -42,7 +42,7 @@ public class TransposedMapping extends TableMapping {
       //A regular column family mapping
       CassandraPut put = new CassandraPut(ByteBuffer.wrap(keyBytes));
       CassandraColumn cc = new CassandraColumn();
-      cc.setTimeStamp(System.currentTimeMillis());
+      cc.setTimeStamp(System.currentTimeMillis() * 1000);
       cc.setColumnFamily(cassandraColumnFamily);
       cc.setColumn(serializeToBytes(columnName, fields, list, declaredFields));
       cc.setValue(serializeToBytes(columnValue, fields, list, declaredFields));
@@ -60,7 +60,7 @@ public class TransposedMapping extends TableMapping {
           useJsonSerialize(columnName, declaredFields));
       CassandraPut column = new CassandraPut(ByteBuffer.wrap(colName));
       CassandraColumn cc = new CassandraColumn();
-      cc.setTimeStamp(System.currentTimeMillis());
+      cc.setTimeStamp(System.currentTimeMillis() * 1000);
       cc.setColumnFamily(cassandraColumnFamily);
       cc.setColumn(serializeToBytes(subColumnName, fields, list, declaredFields));
       cc.setValue(serializeToBytes(columnValue, fields, list, declaredFields));
