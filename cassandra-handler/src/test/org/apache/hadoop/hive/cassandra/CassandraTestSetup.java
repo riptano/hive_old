@@ -28,11 +28,10 @@ public class CassandraTestSetup extends TestSetup {
   @SuppressWarnings("deprecation")
   void preTest(HiveConf conf, String logDir) throws Exception {
     CassandraServiceFactory csf = new CassandraServiceFactory(":", logDir+Path.SEPARATOR+"cassandra-artifacts.txt");
-
     if (cassandra == null) {
       cassandra = csf.getEmbeddedCassandraService();
     }
-
+new Exception("TRACE").printStackTrace();
 
     String auxJars = conf.getAuxJars();
     auxJars = ((auxJars == null) ? "" : (auxJars + ",")) + "file://"
