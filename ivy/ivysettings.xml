@@ -61,9 +61,15 @@
        <ivy pattern="${repo.dir}/org/apache/hadoop/[module]/[revision]/[module]-[revision].pom"/>
     </filesystem>
 
+    <filesystem name="fs2" m2compatible="true" force="true">
+       <artifact pattern="${repo.dir}/org/apache/cassandra/[module]/[revision]/[module]-[revision].[ext]"/>
+       <ivy pattern="${repo.dir}/org/apache/cassandra/[module]/[revision]/[module]-[revision].pom"/>
+    </filesystem>
+
     <chain name="default" dual="true" returnFirst="true" 
            checkmodified="${ivy.checkmodified}" 
            changingPattern="${ivy.changingPattern}">
+      <resolver ref="fs2"/>
       <resolver ref="apache-snapshot"/>
       <resolver ref="maven2"/>
       <resolver ref="datanucleus-repo"/>
