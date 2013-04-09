@@ -81,7 +81,7 @@ public class RegularTableMapping extends TableMapping {
             System.arraycopy(serializeStream.getData(), 0, value, 0, serializeStream.getCount());
 
             CassandraColumn cc = new CassandraColumn();
-            cc.setTimeStamp(System.currentTimeMillis());
+            cc.setTimeStamp(System.currentTimeMillis() * 1000);
             cc.setColumnFamily(cassandraColumnFamily);
             cc.setColumn(columnQualifier);
             cc.setValue(value);
@@ -91,7 +91,7 @@ public class RegularTableMapping extends TableMapping {
         }
       } else {
         CassandraColumn cc = new CassandraColumn();
-        cc.setTimeStamp(System.currentTimeMillis());
+        cc.setTimeStamp(System.currentTimeMillis() * 1000);
         cc.setColumnFamily(cassandraColumnFamily);
         cc.setColumn(cassandraColumn.getBytes());
         byte[] key = serializeToBytes(foi, doi, f, useJsonSerialize(i, declaredFields));
